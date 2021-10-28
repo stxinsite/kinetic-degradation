@@ -312,6 +312,38 @@ E3_total = results_df.filter(regex = '(.*E3)|(Ternary.*)').sum(axis = 1)
 np.allclose(E3_total, E3_total[0])
 
 """
+BARTLETT SUPPLEMENTARY FIGURE 1 (c)
+"""
+y0 = np.array([100 * Vec / 1000, BPD_ic, T, E3, BPD_T, BPD_E3, Ternary] + Ternary_Ubs)
+t = np.arange(start = 0, stop = 48 + 1, step = 2)
+
+results = calc_concentrations(times = t, y0 = y0)
+np.all(results.y >= 0)
+results_df = plot_concentrations(t, results.y, show_plot = False)
+T_total = results_df.filter(regex = '(.*T)|(Ternary.*)').sum(axis = 1)
+Target_deg = T_total / T_total[0] * 100
+
+Target_deg_df = pd.DataFrame({'t': t, 'Target_deg': Target_deg})
+
+plt.rcParams["figure.figsize"] = [12, 8]
+plt.rcParams["figure.autolayout"] = True
+ax = Target_deg_df.plot(
+    x = 't',
+    xlabel = 'Time (h)',
+    y = 'Target_deg',
+    ylabel = '% Baseline Target Protein',
+    kind = 'line',
+    xlim = (0, 48),
+    ylim = (0, 120),
+    xticks = np.arange(start = 0, stop = 48 + 1, step = 6),
+    # title='Ternary complex formation',
+    legend = False
+)
+plt.show()
+
+
+
+"""
 BARTLETT SUPPLEMENTARY FIGURE 1 (b)
 """
 Conc_BPD_ec_arr = np.logspace(base = 10.0, start = -1, stop = 5, num = 50)
