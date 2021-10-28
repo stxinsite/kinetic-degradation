@@ -23,9 +23,9 @@ Kd_E3_ternary = Kd_E3_binary / alpha
 koff_E3_ternary = 11160.
 kon_E3_ternary = koff_E3_ternary / Kd_E3_ternary
 
-n = 0 # 3  # set to 0 for ternary formation
+n = 3  # set to 0 for ternary formation
 MTT_deg = 0.0015
-ktransit_UPS = 0 # (n + 1) / MTT_deg  # set to 0 for ternary formation
+ktransit_UPS = (n + 1) / MTT_deg  # set to 0 for ternary formation
 fu_c = np.nan
 fu_ec = 1.
 fu_ic = 1.
@@ -35,16 +35,16 @@ CL = np.nan
 Vc = np.nan
 Q = np.nan
 Vp = np.nan
-PS_cell = 0 # 1e-12  # set to 0 for ternary formation
+PS_cell = 1e-12  # set to 0 for ternary formation
 PSV_tissue = np.nan
 MW_BPD = 947.
 
 # PHYSIOLOGICAL SYSTEM PARAMETERS
-kdeg_T = 0 # 0.058  # set to 0 for ternary formation
-Conc_T_base = 0.2
-Conc_E3_base = 0.5
+kdeg_T = 0.058  # set to 0 for ternary formation
+Conc_T_base = 0.001
+Conc_E3_base = 0.1
 num_cells = 5e3
-Vic = 1e-4 # 5e-13
+Vic = 5e-13
 Vec = 2e-4
 kprod_T = Conc_T_base * Vic * kdeg_T
 BW = np.nan
@@ -239,15 +239,19 @@ def calc_concentrations(times, y0):
 
     tmin = np.min(times)
     tmax = np.max(times)
+    dtimes = times[1:] - times[:-1]  # intervals between times
+    max_step = 0.001
+
     results = integrate.solve_ivp(rates, (tmin, tmax), y0,
                                   method = 'BDF',
+                                  max_step = max_step,
                                   t_eval = times,
                                   jac = jac_rates
                                   )
 
     return results
 
-def plot_concentrations(times, ytimes):
+def plot_concentrations(times, ytimes, show_plot = True):
     results_df = pd.DataFrame(ytimes.T,
                               columns = (
                                 [
@@ -264,33 +268,39 @@ def plot_concentrations(times, ytimes):
                              )
     results_df['t'] = times
 
-    # plt.rcParams["figure.autolayout"] = True
-    ax = results_df.plot(x='t',
-                         xlabel = 'Time (hours)',
-                         ylabel = 'Amount (uM)',
-                         kind='bar',
-                         stacked=True,
-                         logy = False,
-                         title='Amounts of species in ternary complex kinetic model',
-                         figsize = (12, 8)
-                         )
-    plt.legend(bbox_to_anchor=(1.0, 1.0))
-    plt.show()
+    if show_plot:
+        # plt.rcParams["figure.autolayout"] = True
+        ax = results_df.plot(x='t',
+                             xlabel = 'Time (hours)',
+                             ylabel = 'Amount (uM)',
+                             kind='bar',
+                             stacked=True,
+                             logy = False,
+                             title='Amounts of species in ternary complex kinetic model',
+                             figsize = (12, 8)
+                             )
+        plt.legend(bbox_to_anchor=(1.0, 1.0))
+        plt.show()
+
     return results_df
 
 """SIMULATIONS"""
 # species amounts at time = 0
-y0 = np.array([BPD_ec, 1000 * Vic / 1000, T, E3, BPD_T, BPD_E3, Ternary] + Ternary_Ubs)
+y0 = np.array([100 * Vec / 1000, BPD_ic, T, E3, BPD_T, BPD_E3, Ternary] + Ternary_Ubs)
+y0
 # time steps
-# t = np.arange(start = 0, stop = 168 + 1, step = 24)
-t = np.array([0, 0.5, 1])
+t = np.arange(start = 0, stop = 48 + 1, step = 6)
+# t = np.array([0, 24, 48])
+t
 
 results = calc_concentrations(times = t, y0 = y0)
+results
+
+results.message
 results.success
+np.all(results.y >= 0)
 
 results_df = plot_concentrations(t, results.y)
-
-
 
 BPD_total = results_df.filter(regex = '(BPD.*)|(Ternary.*)', axis = 1).sum(axis = 1)
 np.allclose(BPD_total, BPD_total[0])
@@ -303,8 +313,38 @@ np.allclose(E3_total, E3_total[0])
 
 """
 BARTLETT SUPPLEMENTARY FIGURE 1 (b)
-
 """
+Conc_BPD_ec_arr = np.logspace(base = 10.0, start = -1, stop = 5, num = 50)
+Target_deg_arr = np.empty((len(Conc_BPD_ec_arr),2))
+
+for count, conc in enumerate(Conc_BPD_ec_arr):
+    y0 = np.array([conc * Vec / 1000, BPD_ic, T, E3, BPD_T, BPD_E3, Ternary] + Ternary_Ubs)
+    t = np.array([0, 24])
+    results = calc_concentrations(times = t, y0 = y0)
+    results_df = plot_concentrations(t, results.y, show_plot = False)
+    T_total = results_df.filter(regex = '(.*T)|(Ternary.*)').sum(axis = 1)
+
+    Target_deg_arr[count, 0] = conc
+    Target_deg_arr[count, 1] = T_total.values[1] / T * 100
+
+Target_deg_df = pd.DataFrame(Target_deg_arr, columns = ['Conc_BPD_ec', 'Target_deg'])
+
+plt.rcParams["figure.figsize"] = [12, 8]
+plt.rcParams["figure.autolayout"] = True
+ax = Target_deg_df.plot(
+    x = 'Conc_BPD_ec',
+    xlabel = 'BPD Concentration (nM)',
+    y = 'Target_deg',
+    ylabel = '% Baseline Target Protein',
+    kind = 'line',
+    xlim = (1e-1, 1e5),
+    ylim = (0, 120),
+    logx = True,
+    # title='Ternary complex formation',
+    legend = False
+)
+plt.show()
+
 
 """
 BARTLETT SUPPLEMENTARY FIGURE 1 (a)
@@ -326,13 +366,16 @@ Ternary_formation_df['relative_Ternary'] = Ternary_formation_df['Ternary'] / Ter
 
 plt.rcParams["figure.figsize"] = [12, 8]
 plt.rcParams["figure.autolayout"] = True
-ax = Ternary_formation_df.plot(x = 'Conc_BPD_ic',
-                               xlabel = 'BPD Concentration (nM)',
-                               y = 'relative_Ternary',
-                               ylabel = '% Relative Ternary Complex',
-                               kind = 'line',
-                               ylim = (0, 120),
-                               logx = True,
-                               # title='Ternary complex formation',
-                               legend = False)
+ax = Ternary_formation_df.plot(
+    x = 'Conc_BPD_ic',
+    xlabel = 'BPD Concentration (nM)',
+    y = 'relative_Ternary',
+    ylabel = '% Relative Ternary Complex',
+    kind = 'line',
+    xlim = (1e-1, 1e5),
+    ylim = (0, 120),
+    logx = True,
+    # title='Ternary complex formation',
+    legend = False
+)
 plt.show()
