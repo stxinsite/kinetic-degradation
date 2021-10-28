@@ -214,33 +214,6 @@ def plot_concentrations(times, ytimes):
     plt.show()
     return results_df
 
-# this function is like rates_ternary_formation()
-def f(x, TT, *y):
-    # this function is like dTernary_Ubdt()
-    def g(arr):
-        return arr[0] + arr[1] + koff_T_ternary
-
-    print(x, TT, y)
-    if len(y):  # if y has non-zero length
-        y_arr = np.insert(np.array(y), 0, TT)
-        y_pairs = np.lib.stride_tricks.sliding_window_view(y_arr, 2)
-        g_arr = np.apply_along_axis(g, 1, y_pairs)
-        print(y_pairs)
-    else:
-        g_arr = np.empty(0)
-    print(g_arr)
-
-z = np.array([0, 1, 2, 3, 4, 5, ])
-f(*z)
-
-q = np.array([0, 1,])
-f(*q)
-
-
-a = np.array([1, 2, 3])
-b = np.repeat(0, 4)
-np.concatenate((a, b))
-
 """SIMULATIONS"""
 # species amounts at time = 0
 y0 = np.array([BPD_ic, T, E3, BPD_T, BPD_E3, Ternary])
