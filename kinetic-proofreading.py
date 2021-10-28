@@ -110,25 +110,36 @@ def dTernary_Ubdt(Ternary_Ub_pair):
     return ktransit_UPS * Ternary_Ub_pair[0] - \
            (kdeg_T + koff_T_ternary + koff_E3_ternary + ktransit_UPS) * Ternary_Ub_pair[1]
 
-def rates_ternary_formation(BPD_ic, T, E3, BPD_T, BPD_E3, Ternary):
-    # BPD_ec_rate = dBPD_ecdt(BPD_ec, BPD_ic)
+def rates_ternary_formation(BPD_ec, BPD_ic, T, E3, BPD_T, BPD_E3, Ternary, *Ternary_Ubs):
+    BPD_ec_rate = dBPD_ecdt(BPD_ec, BPD_ic)
     BPD_ic_rate = dBPD_icdt(BPD_ic, T, E3, BPD_T, BPD_E3)
     T_rate = dTargetdt(BPD_ic, T, BPD_T, BPD_E3, Ternary)
     E3_rate = dE3dt(BPD_ic, E3, BPD_T, BPD_E3, Ternary)
     BPD_T_rate = dBPD_Tdt(BPD_ic, T, E3, BPD_T, Ternary)
     BPD_E3_rate = dBPD_E3dt(BPD_ic, T, E3, BPD_E3, Ternary)
     Ternary_rate = dTernarydt(T, E3, BPD_T, BPD_E3, Ternary)
-    return np.array([BPD_ic_rate, T_rate, E3_rate, BPD_T_rate, BPD_E3_rate, Ternary_rate])
+    if len(Ternary_Ubs):  # if there is at least one ubiquitination step
+        Ternary_all = np.insert(np.array(Ternary_Ubs), 0, Ternary)  # prepend Ternary to Ternary_Ubs
+        Ternary_pairs = np.lib.stride_tricks.sliding_window_view(Ternary_all, 2)  # create sliding window of pairs
+        Ternary_Ubs_rates = np.apply_along_axis(dTernary_Ubdt, 1, Ternary_pairs)  # apply dTernary_Ubdt to each pair
+    else:
+        Ternary_Ubs_rates = np.empty(0)
 
-def jac_rates_ternary_formation(BPD_ic, T, E3, BPD_T, BPD_E3, Ternary):
+    ternary_formation_rates = np.array([BPD_ic_rate, T_rate, E3_rate, BPD_T_rate, BPD_E3_rate, Ternary_rate])
+    all_rates = np.concatenate((ternary_formation_rates, Ternary_Ubs_rates))
+    return all_rates
+
+def jac_rates_ternary_formation(BPD_ec, BPD_ic, T, E3, BPD_T, BPD_E3, Ternary, *Ternary_Ubs):
     """
     df / dy = [ df/dBPD_ic, df/dT, df/dE3, df/dBPD_T, df/dBPD_E3, df/dTernary ]
     """
-    # dBPD_ecdt / dy
-    # dBPD_ecdtdy = np.array([-PS_cell * num_cells * fu_ec / Vec,
-    #                         PS_cell * num_cells * fu_ic / Vic,
-    #                         0, 0, 0, 0, 0])
+    dBPD_ecdtdy = np.array([
+        -PS_cell * num_cells * fu_ec / Vec,
+        PS_cell * num_cells * fu_ic / Vic
+    ] + [0] * (5 + n)
+    )
     dBPD_icdtdy = np.array([
+
         -PS_cell * fu_ic / Vic - kon_T_binary * fu_ic * T / Vic - kon_E3_binary * fu_ic * E3 / Vic,
         -kon_T_binary * fu_ic * BPD_ic / Vic,
         -kon_E3_binary * fu_ic * BPD_ic / Vic,
