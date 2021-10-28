@@ -270,6 +270,7 @@ def plot_concentrations(times, ytimes, show_plot = True):
 
     if show_plot:
         # plt.rcParams["figure.autolayout"] = True
+        plt.rcParams["axes.labelsize"] = 20
         ax = results_df.plot(x='t',
                              xlabel = 'Time (hours)',
                              ylabel = 'Amount (uM)',
@@ -325,8 +326,7 @@ Target_deg = T_total / T_total[0] * 100
 
 Target_deg_df = pd.DataFrame({'t': t, 'Target_deg': Target_deg})
 
-plt.rcParams["figure.figsize"] = [12, 8]
-plt.rcParams["figure.autolayout"] = True
+plt.rcParams["axes.labelsize"] = 20
 ax = Target_deg_df.plot(
     x = 't',
     xlabel = 'Time (h)',
@@ -336,8 +336,10 @@ ax = Target_deg_df.plot(
     xlim = (0, 48),
     ylim = (0, 120),
     xticks = np.arange(start = 0, stop = 48 + 1, step = 6),
+    fontsize = 20,
     # title='Ternary complex formation',
-    legend = False
+    legend = False,
+    figsize = (12, 8)
 )
 plt.show()
 
@@ -361,8 +363,7 @@ for count, conc in enumerate(Conc_BPD_ec_arr):
 
 Target_deg_df = pd.DataFrame(Target_deg_arr, columns = ['Conc_BPD_ec', 'Target_deg'])
 
-plt.rcParams["figure.figsize"] = [12, 8]
-plt.rcParams["figure.autolayout"] = True
+plt.rcParams["axes.labelsize"] = 20
 ax = Target_deg_df.plot(
     x = 'Conc_BPD_ec',
     xlabel = 'BPD Concentration (nM)',
@@ -371,9 +372,11 @@ ax = Target_deg_df.plot(
     kind = 'line',
     xlim = (1e-1, 1e5),
     ylim = (0, 120),
+    fontsize = 20,
     logx = True,
     # title='Ternary complex formation',
-    legend = False
+    legend = False,
+    figsize = (12, 8)
 )
 plt.show()
 
@@ -396,8 +399,7 @@ for count, conc in enumerate(Conc_BPD_ic_arr):
 Ternary_formation_df = pd.DataFrame(Ternary_formation_arr, columns = ['Conc_BPD_ic', 'Ternary'])
 Ternary_formation_df['relative_Ternary'] = Ternary_formation_df['Ternary'] / Ternary_formation_df['Ternary'].max() * 100
 
-plt.rcParams["figure.figsize"] = [12, 8]
-plt.rcParams["figure.autolayout"] = True
+plt.rcParams["axes.labelsize"] = 20
 ax = Ternary_formation_df.plot(
     x = 'Conc_BPD_ic',
     xlabel = 'BPD Concentration (nM)',
@@ -406,8 +408,10 @@ ax = Ternary_formation_df.plot(
     kind = 'line',
     xlim = (1e-1, 1e5),
     ylim = (0, 120),
+    fontsize = 20,
     logx = True,
     # title='Ternary complex formation',
-    legend = False
+    legend = False,
+    figsize = (12, 8)
 )
 plt.show()
