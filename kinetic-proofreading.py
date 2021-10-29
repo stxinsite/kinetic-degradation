@@ -230,7 +230,7 @@ def jac_rates_ternary_formation(BPD_ec, BPD_ic, T, E3, BPD_T, BPD_E3, Ternary, *
     )
     return all_jacs
 
-def calc_concentrations(times, y0):
+def calc_concentrations(times, y0, max_step = np.inf, rtol = 1e-3, atol = 1e-6):
     def rates(t, y):
         return rates_ternary_formation(*y)
 
@@ -240,13 +240,14 @@ def calc_concentrations(times, y0):
     tmin = np.min(times)
     tmax = np.max(times)
     dtimes = times[1:] - times[:-1]  # intervals between times
-    max_step = 0.001
 
     results = integrate.solve_ivp(rates, (tmin, tmax), y0,
                                   method = 'BDF',
-                                  max_step = max_step,
                                   t_eval = times,
-                                  jac = jac_rates
+                                  jac = jac_rates,
+                                  max_step = max_step,
+                                  rtol = rtol,
+                                  atol = atol
                                   )
 
     return results
@@ -318,7 +319,7 @@ BARTLETT SUPPLEMENTARY FIGURE 1 (c)
 y0 = np.array([100 * Vec / 1000, BPD_ic, T, E3, BPD_T, BPD_E3, Ternary] + Ternary_Ubs)
 t = np.arange(start = 0, stop = 48 + 1, step = 2)
 
-results = calc_concentrations(times = t, y0 = y0)
+results = calc_concentrations(times = t, y0 = y0, max_step = 0.001)
 np.all(results.y >= 0)
 results_df = plot_concentrations(t, results.y, show_plot = False)
 T_total = results_df.filter(regex = '(.*T)|(Ternary.*)').sum(axis = 1)
@@ -351,10 +352,15 @@ BARTLETT SUPPLEMENTARY FIGURE 1 (b)
 Conc_BPD_ec_arr = np.logspace(base = 10.0, start = -1, stop = 5, num = 50)
 Target_deg_arr = np.empty((len(Conc_BPD_ec_arr),2))
 
+# Takes ~100s for 20 concentrations, 2 time points each
+# %%timeit
 for count, conc in enumerate(Conc_BPD_ec_arr):
+    if (count + 1) % 10 == 0:
+        progress = (count + 1) / len(Conc_BPD_ec_arr) * 100
+        print("Progress: " + str(progress))
     y0 = np.array([conc * Vec / 1000, BPD_ic, T, E3, BPD_T, BPD_E3, Ternary] + Ternary_Ubs)
     t = np.array([0, 24])
-    results = calc_concentrations(times = t, y0 = y0)
+    results = calc_concentrations(times = t, y0 = y0, max_step = 0.0024)
     results_df = plot_concentrations(t, results.y, show_plot = False)
     T_total = results_df.filter(regex = '(.*T)|(Ternary.*)').sum(axis = 1)
 
