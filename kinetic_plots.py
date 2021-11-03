@@ -1,19 +1,14 @@
 import numpy as np
 import pandas as pd
-from kinetic_proofreading import *
+from kinetic_proofreading import calc_concentrations, dataframe_concentrations, plot_concentrations
 import matplotlib.pyplot as plt
 import matplotlib.colors
 from matplotlib.ticker import FuncFormatter
 from mpl_toolkits import mplot3d
+import global_
 plt.rcParams["axes.labelsize"] = 20
 plt.rcParams["axes.titlesize"] = 20
 plt.rcParams["figure.figsize"] = (12,9)
-
-set_global_values(['BPD_ec'], [0.0])
-BPD_ec
-
-globals()['BPD_ec'] = 0.0
-
 
 """SIMULATIONS"""
 # species amounts at time = 0
