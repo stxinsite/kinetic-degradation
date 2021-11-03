@@ -2,65 +2,22 @@ import scipy.integrate as integrate
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
+import global_
 
-"""GLOBAL VARIABLES"""
-# BPD PARAMETERS
-alpha = 1.
-
-Kd_T_binary = 0.091
-kon_T_binary = 3600.
-koff_T_binary = kon_T_binary * Kd_T_binary
-
-Kd_T_ternary = Kd_T_binary / alpha
-koff_T_ternary = 327.6
-kon_T_ternary = koff_T_ternary / Kd_T_ternary
-
-Kd_E3_binary = 3.1
-kon_E3_binary = 3600.
-koff_E3_binary = kon_E3_binary * Kd_E3_binary
-
-Kd_E3_ternary = Kd_E3_binary / alpha
-koff_E3_ternary = 11160.
-kon_E3_ternary = koff_E3_ternary / Kd_E3_ternary
-
-n = 3  # set to 0 for ternary formation
-MTT_deg = 0.0015
-ktransit_UPS = (n + 1) / MTT_deg  # set to 0 for ternary formation
-fu_c = np.nan
-fu_ec = 1.
-fu_ic = 1.
-F = np.nan
-ka = np.nan
-CL = np.nan
-Vc = np.nan
-Q = np.nan
-Vp = np.nan
-PS_cell = 1e-12  # set to 0 for ternary formation
-PSV_tissue = np.nan
-MW_BPD = 947.
-
-# PHYSIOLOGICAL SYSTEM PARAMETERS
-kdeg_T = 0.058  # set to 0 for ternary formation
-Conc_T_base = 0.001
-Conc_E3_base = 0.1
-num_cells = 5e3
-Vic = 5e-13
-Vec = 2e-4
-kprod_T = Conc_T_base * Vic * kdeg_T
-BW = np.nan
-
-"""INITIAL VALUES"""
-BPD_ev = 0
-BPD_c = 0
-BPD_p = 0
-BPD_ec = 0  # nM * Vec / 1000
-BPD_ic = 0  # nM * Vic / 1000
-T = Conc_T_base * Vic
-E3 = Conc_E3_base * Vic
-BPD_T = 0
-BPD_E3 = 0
-Ternary = 0
-Ternary_Ubs = [0] * n  # where i = 0 is un-ubiquitinated Ternary
+# """UPDATE/SET GLOBAL VARIABLES"""
+# def set_global_values(global_var_names, global_var_values):
+#     """
+#     Update global variable values.
+#
+#     global_var_names: <list, shape(n)> a list of strings of global variables names
+#     global_var_values: <list, shape(n)> a list of values at which to set corresponding variable in global_var_names
+#     """
+#     assert type(global_var_names) is list and type(global_var_values) is list, "Arguments must be lists of same length."
+#     assert len(global_var_names) == len(global_var_values), "Arguments must be lists of same length."
+#
+#     n_var_names = len(global_var_names)
+#     for i in range(n_var_names):
+#         globals()[global_var_names[i]] = global_var_values[i]
 
 """KINETIC RATES"""
 def dBPD_ecdt(BPD_ec, BPD_ic):
@@ -252,8 +209,11 @@ def calc_concentrations(times, y0, max_step = np.inf, rtol = 1e-3, atol = 1e-6):
 
     return results
 
-def plot_concentrations(times, ytimes, show_plot = True):
-    results_df = pd.DataFrame(ytimes.T,
+def dataframe_concentrations(solve_ivp_result):
+    """
+    Creates pandas.DataFrame from result object of scipy.integrate.solve_ivp()
+    """
+    results_df = pd.DataFrame(solve_ivp_result.y.T,
                               columns = (
                                 [
                                     'BPD_ec',
@@ -267,21 +227,25 @@ def plot_concentrations(times, ytimes, show_plot = True):
                                 + ['Ternary_Ub_' + str(i) for i in range(1, n + 1)]  # empty list if n == 0
                               )
                              )
-    results_df['t'] = times
-
-    if show_plot:
-        # plt.rcParams["figure.autolayout"] = True
-        plt.rcParams["axes.labelsize"] = 20
-        ax = results_df.plot(x='t',
-                             xlabel = 'Time (hours)',
-                             ylabel = 'Amount (uM)',
-                             kind='bar',
-                             stacked=True,
-                             logy = False,
-                             title='Amounts of species in ternary complex kinetic model',
-                             figsize = (12, 8)
-                             )
-        plt.legend(bbox_to_anchor=(1.0, 1.0))
-        plt.show()
-
+    results_df['t'] = solve_ivp_result.t
     return results_df
+
+def plot_concentrations(results_df):
+    """
+    Plots columns of result from *.dataframe_concentrations() against time column `t`.
+
+    results_df <pandas.DataFrame>: dataframe with `t` column and species columns
+    """
+    plt.rcParams["axes.labelsize"] = 20
+    ax = results_df.plot(x='t',
+                         xlabel = 'Time (hours)',
+                         ylabel = 'Amount (uM)',
+                         kind='bar',
+                         stacked=True,
+                         logy = False,
+                         title='Amounts of species in kinetic model',
+                         figsize = (12, 8),
+                         fontsize = 20
+                         )
+    plt.legend(bbox_to_anchor=(1.0, 1.0))
+    plt.show()
