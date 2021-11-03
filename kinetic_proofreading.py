@@ -1,84 +1,100 @@
-import scipy.integrate as integrate
 import numpy as np
 import pandas as pd
+import scipy.integrate as integrate
 from matplotlib import pyplot as plt
-import global_
 
-# """UPDATE/SET GLOBAL VARIABLES"""
-# def set_global_values(global_var_names, global_var_values):
-#     """
-#     Update global variable values.
-#
-#     global_var_names: <list, shape(n)> a list of strings of global variables names
-#     global_var_values: <list, shape(n)> a list of values at which to set corresponding variable in global_var_names
-#     """
-#     assert type(global_var_names) is list and type(global_var_values) is list, "Arguments must be lists of same length."
-#     assert len(global_var_names) == len(global_var_values), "Arguments must be lists of same length."
-#
-#     n_var_names = len(global_var_names)
-#     for i in range(n_var_names):
-#         globals()[global_var_names[i]] = global_var_values[i]
+"""
+Functions in KINETIC RATES section must be provided `params` dictionary with the following fields:
+
+alpha: cooperativity
+Kd_T_binary: equilibrium dissociation constant of T in binary complex
+kon_T_binary: kon of BPD + T -> BPD-T
+koff_T_binary: koff of BPD-T -> BPD + T
+Kd_T_ternary: equilibrium dissociation constant of T in ternary complex
+kon_T_ternary: kon of BPD-E3 + T -> T-BPD-E3
+koff_T_ternary: koff of T-BPD-E3 -> BPD-E3 + T
+Kd_E3_binary: equilibrium dissociation constant of E3 in binary complex
+kon_E3_binary: kon of BPD + E3 -> BPD-E3
+koff_E3_binary: koff of BPD-E3 -> BPD + E3
+Kd_E3_ternary: equilibrium dissociation constant of E3 in ternary complex
+kon_E3_ternary: kon of BPD-T + E3 -> T-BPD-E3
+koff_E3_ternary: koff of T-BPD-E3 -> BPD-T + E3
+n: number of ubiquitination steps before degradation
+MTT_deg: mean transit time of degradation
+ktransit_UPS: transit rate
+fu_ec: fraction unbound extracellular BPD
+fu_ic: fraction unbound intracellular BPD
+PS_cell: permeability-surface area product
+kprod_T: baseline target protein production rate
+kdeg_T: baseline target protein degradation rate
+Conc_T_base: baseline target protein concentration
+Conc_E3_base: baseline E3 concentration
+num_cells: number of cells in system
+Vic: intracellular volume
+Vec: extracellular volume
+"""
 
 """KINETIC RATES"""
-def dBPD_ecdt(BPD_ec, BPD_ic):
-    return -PS_cell * num_cells * ((fu_ec * BPD_ec / Vec) - (fu_ic * BPD_ic / Vic))
+def dBPD_ecdt(params, BPD_ec, BPD_ic):
+    return - params['PS_cell'] * params['num_cells'] * \
+           ( (params['fu_ec'] * BPD_ec / params['Vec']) - (params['fu_ic'] * BPD_ic / params['Vic']) )
 
-def dBPD_icdt(BPD_ec, BPD_ic, T, E3, BPD_T, BPD_E3):
-    return PS_cell * ((fu_ec * BPD_ec / Vec) - (fu_ic * BPD_ic / Vic)) - \
-           kon_T_binary * fu_ic * BPD_ic * T / Vic + \
-           koff_T_binary * BPD_T - \
-           kon_E3_binary * fu_ic * BPD_ic * E3 / Vic + \
-           koff_E3_binary * BPD_E3 + \
-           kdeg_T * BPD_T
+def dBPD_icdt(params, BPD_ec, BPD_ic, T, E3, BPD_T, BPD_E3):
+    return params['PS_cell'] * ((params['fu_ec'] * BPD_ec / params['Vec']) - (params['fu_ic'] * BPD_ic / params['Vic'])) - \
+           params['kon_T_binary'] * params['fu_ic'] * BPD_ic * T / params['Vic'] + \
+           params['koff_T_binary'] * BPD_T - \
+           params['kon_E3_binary'] * params['fu_ic'] * BPD_ic * E3 / params['Vic'] + \
+           params['koff_E3_binary'] * BPD_E3 + \
+           params['kdeg_T'] * BPD_T
 
-def dTargetdt(BPD_ic, T, BPD_T, BPD_E3, Ternary, *Ternary_Ubs):
-    return kprod_T - kdeg_T * T - \
-           kon_T_binary * fu_ic * BPD_ic * T / Vic + \
-           koff_T_binary * BPD_T - \
-           kon_T_ternary * BPD_E3 * T / Vic + \
-           koff_T_ternary * (Ternary + np.sum(Ternary_Ubs))
+def dTargetdt(params, BPD_ic, T, BPD_T, BPD_E3, Ternary, *Ternary_Ubs):
+    return params['kprod_T'] - params['kdeg_T'] * T - \
+           params['kon_T_binary'] * params['fu_ic'] * BPD_ic * T / params['Vic'] + \
+           params['koff_T_binary'] * BPD_T - \
+           params['kon_T_ternary'] * BPD_E3 * T / params['Vic'] + \
+           params['koff_T_ternary'] * (Ternary + np.sum(Ternary_Ubs))
 
-def dE3dt(BPD_ic, E3, BPD_T, BPD_E3, Ternary, *Ternary_Ubs):
-    return -kon_E3_binary * fu_ic * BPD_ic * E3 / Vic + \
-           koff_E3_binary * BPD_E3 - \
-           kon_E3_ternary * BPD_T * E3 / Vic + \
-           koff_E3_ternary * (Ternary + np.sum(Ternary_Ubs))
+def dE3dt(params, BPD_ic, E3, BPD_T, BPD_E3, Ternary, *Ternary_Ubs):
+    return - params['kon_E3_binary'] * params['fu_ic'] * BPD_ic * E3 / params['Vic'] + \
+           params['koff_E3_binary'] * BPD_E3 - \
+           params['kon_E3_ternary'] * BPD_T * E3 / params['Vic'] + \
+           params['koff_E3_ternary'] * (Ternary + np.sum(Ternary_Ubs))
 
-def dBPD_Tdt(BPD_ic, T, E3, BPD_T, Ternary, *Ternary_Ubs):
-    return kon_T_binary * fu_ic * BPD_ic * T / Vic - \
-           koff_T_binary * BPD_T - \
-           kon_E3_ternary * BPD_T * E3 / Vic + \
-           koff_E3_ternary * (Ternary + np.sum(Ternary_Ubs)) - \
-           kdeg_T * BPD_T
+def dBPD_Tdt(params, BPD_ic, T, E3, BPD_T, Ternary, *Ternary_Ubs):
+    return params['kon_T_binary'] * params['fu_ic'] * BPD_ic * T / params['Vic'] - \
+           params['koff_T_binary'] * BPD_T - \
+           params['kon_E3_ternary'] * BPD_T * E3 / params['Vic'] + \
+           params['koff_E3_ternary'] * (Ternary + np.sum(Ternary_Ubs)) - \
+           params['kdeg_T'] * BPD_T
 
-def dBPD_E3dt(BPD_ic, T, E3, BPD_E3, Ternary, *Ternary_Ubs):
-    return kon_E3_binary * fu_ic * BPD_ic * E3 / Vic - \
-           koff_E3_binary * BPD_E3 - \
-           kon_T_ternary * BPD_E3 * T / Vic + \
-           (koff_T_ternary + kdeg_T) * (Ternary + np.sum(Ternary_Ubs)) + \
-           ktransit_UPS * (Ternary_Ubs[-1] if n > 0 else 0)
+def dBPD_E3dt(params, BPD_ic, T, E3, BPD_E3, Ternary, *Ternary_Ubs):
+    return params['kon_E3_binary'] * params['fu_ic'] * BPD_ic * E3 / params['Vic'] - \
+           params['koff_E3_binary'] * BPD_E3 - \
+           params['kon_T_ternary'] * BPD_E3 * T / params['Vic'] + \
+           (params['koff_T_ternary'] + params['kdeg_T']) * (Ternary + np.sum(Ternary_Ubs)) + \
+           params['ktransit_UPS'] * (Ternary_Ubs[-1] if params['n'] > 0 else 0)
 
-def dTernarydt(T, E3, BPD_T, BPD_E3, Ternary):
-    return kon_T_ternary * BPD_E3 * T / Vic + \
-           kon_E3_ternary * BPD_T * E3 / Vic - \
-           (kdeg_T + koff_T_ternary + koff_E3_ternary + ktransit_UPS) * Ternary
+def dTernarydt(params, T, E3, BPD_T, BPD_E3, Ternary):
+    return params['kon_T_ternary'] * BPD_E3 * T / params['Vic'] + \
+           params['kon_E3_ternary'] * BPD_T * E3 / params['Vic'] - \
+           (params['kdeg_T'] + params['koff_T_ternary'] + params['koff_E3_ternary'] + params['ktransit_UPS']) * Ternary
 
-def dTernary_Ubdt(Ternary_Ub_consec):
-    return ktransit_UPS * Ternary_Ub_consec[0] - \
-           (kdeg_T + koff_T_ternary + koff_E3_ternary + ktransit_UPS) * Ternary_Ub_consec[1]
+def dTernary_Ubdt(Ternary_Ub_consec, params):
+    return params['ktransit_UPS'] * Ternary_Ub_consec[0] - \
+           (params['kdeg_T'] + params['koff_T_ternary'] + params['koff_E3_ternary'] + params['ktransit_UPS']) * Ternary_Ub_consec[1]
 
-def rates_ternary_formation(BPD_ec, BPD_ic, T, E3, BPD_T, BPD_E3, Ternary, *Ternary_Ubs):
-    BPD_ec_rate = dBPD_ecdt(BPD_ec, BPD_ic)
-    BPD_ic_rate = dBPD_icdt(BPD_ec, BPD_ic, T, E3, BPD_T, BPD_E3)
-    T_rate = dTargetdt(BPD_ic, T, BPD_T, BPD_E3, Ternary, *Ternary_Ubs)
-    E3_rate = dE3dt(BPD_ic, E3, BPD_T, BPD_E3, Ternary, *Ternary_Ubs)
-    BPD_T_rate = dBPD_Tdt(BPD_ic, T, E3, BPD_T, Ternary, *Ternary_Ubs)
-    BPD_E3_rate = dBPD_E3dt(BPD_ic, T, E3, BPD_E3, Ternary, *Ternary_Ubs)
-    Ternary_rate = dTernarydt(T, E3, BPD_T, BPD_E3, Ternary)
+def kinetic_rates(params, BPD_ec, BPD_ic, T, E3, BPD_T, BPD_E3, Ternary, *Ternary_Ubs):
+    BPD_ec_rate = dBPD_ecdt(params, BPD_ec, BPD_ic)
+    BPD_ic_rate = dBPD_icdt(params, BPD_ec, BPD_ic, T, E3, BPD_T, BPD_E3)
+    T_rate = dTargetdt(params, BPD_ic, T, BPD_T, BPD_E3, Ternary, *Ternary_Ubs)
+    E3_rate = dE3dt(params, BPD_ic, E3, BPD_T, BPD_E3, Ternary, *Ternary_Ubs)
+    BPD_T_rate = dBPD_Tdt(params, BPD_ic, T, E3, BPD_T, Ternary, *Ternary_Ubs)
+    BPD_E3_rate = dBPD_E3dt(params, BPD_ic, T, E3, BPD_E3, Ternary, *Ternary_Ubs)
+    Ternary_rate = dTernarydt(params, T, E3, BPD_T, BPD_E3, Ternary)
     if n > 0:  # if there is at least one ubiquitination step
         Ternary_all = np.insert(np.array(Ternary_Ubs), 0, Ternary)  # prepend Ternary to Ternary_Ubs
         Ternary_pairs = np.lib.stride_tricks.sliding_window_view(Ternary_all, 2)  # create array of consecutive pairs
-        Ternary_Ubs_rates = np.apply_along_axis(dTernary_Ubdt, 1, Ternary_pairs).tolist()  # apply dTernary_Ubdt() to each pair
+        Ternary_Ubs_rates = np.apply_along_axis(dTernary_Ubdt, 1, Ternary_pairs, params = params).tolist()  # apply dTernary_Ubdt() to each pair
     else:
         Ternary_Ubs_rates = []  # no rates for ubiquitinated Ternary complexes if there are none
 
@@ -87,7 +103,7 @@ def rates_ternary_formation(BPD_ec, BPD_ic, T, E3, BPD_T, BPD_E3, Ternary, *Tern
     )
     return all_rates
 
-def jac_rates_ternary_formation(BPD_ec, BPD_ic, T, E3, BPD_T, BPD_E3, Ternary, *Ternary_Ubs):
+def jac_kinetic_rates(params, BPD_ec, BPD_ic, T, E3, BPD_T, BPD_E3, Ternary, *Ternary_Ubs):
     """
     Jacobian of rates with respect to variables.
     dBPD_ecdtdy, dBPD_icdtdy, ..., dTernarydtdy: list < 7 + n >
@@ -95,90 +111,90 @@ def jac_rates_ternary_formation(BPD_ec, BPD_ic, T, E3, BPD_T, BPD_E3, Ternary, *
     """
     dBPD_ecdtdy = (
         [
-            -PS_cell * num_cells * fu_ec / Vec,
-            PS_cell * num_cells * fu_ic / Vic
+            -params['PS_cell'] * params['num_cells'] * params['fu_ec'] / Vec,
+            params['PS_cell'] * params['num_cells'] * params['fu_ic'] / params['Vic']
         ]
-        + [0] * (5 + n)  # does not depend on T, E3, BPD_T, BPD_E3, Ternary, Ternary_Ubs
+        + [0] * (5 + params['n'])  # does not depend on T, E3, BPD_T, BPD_E3, Ternary, Ternary_Ubs
     )
     dBPD_icdtdy = (
         [
-            PS_cell * fu_ec / Vec,
-            -PS_cell * fu_ic / Vic - kon_T_binary * fu_ic * T / Vic - kon_E3_binary * fu_ic * E3 / Vic,
-            -kon_T_binary * fu_ic * BPD_ic / Vic,
-            -kon_E3_binary * fu_ic * BPD_ic / Vic,
-            koff_T_binary + kdeg_T,
-            koff_E3_binary,
+            params['PS_cell'] * params['fu_ec'] / Vec,
+            -params['PS_cell'] * params['fu_ic'] / params['Vic'] - params['kon_T_binary'] * params['fu_ic'] * T / params['Vic'] - params['kon_E3_binary'] * params['fu_ic'] * E3 / params['Vic'],
+            -params['kon_T_binary'] * params['fu_ic'] * BPD_ic / params['Vic'],
+            -params['kon_E3_binary'] * params['fu_ic'] * BPD_ic / params['Vic'],
+            params['koff_T_binary'] + params['kdeg_T'],
+            params['koff_E3_binary'],
             0
         ]
-        + [0] * n  # does not depend on Ternary_Ubs
+        + [0] * params['n']  # does not depend on Ternary_Ubs
     )
     dTargetdtdy = (
         [
             0,
-            -kon_T_binary * fu_ic * T / Vic,
-            -kdeg_T - kon_T_binary * fu_ic * BPD_ic / Vic - kon_T_ternary * BPD_E3 / Vic,
+            -params['kon_T_binary'] * params['fu_ic'] * T / params['Vic'],
+            -params['kdeg_T'] - params['kon_T_binary'] * params['fu_ic'] * BPD_ic / params['Vic'] - params['kon_T_ternary'] * BPD_E3 / params['Vic'],
             0,
-            koff_T_binary,
-            -kon_T_ternary * T / Vic,
-            koff_T_ternary
+            params['koff_T_binary'],
+            -params['kon_T_ternary'] * T / params['Vic'],
+            params['koff_T_ternary']
         ]
-        + [koff_T_ternary] * n
+        + [params['koff_T_ternary']] * params['n']
     )
     dE3dtdy = (
         [
             0,
-            -kon_E3_binary * fu_ic * E3 / Vic,
+            -params['kon_E3_binary'] * params['fu_ic'] * E3 / params['Vic'],
             0,
-            -kon_E3_binary * fu_ic * BPD_ic / Vic - kon_E3_ternary * BPD_T / Vic,
-            -kon_E3_ternary * E3 / Vic,
-            koff_E3_binary,
-            koff_E3_ternary
+            -params['kon_E3_binary'] * params['fu_ic'] * BPD_ic / params['Vic'] - params['kon_E3_ternary'] * BPD_T / params['Vic'],
+            -params['kon_E3_ternary'] * E3 / params['Vic'],
+            params['koff_E3_binary'],
+            params['koff_E3_ternary']
         ]
-        + [koff_E3_ternary] * n
+        + [params['koff_E3_ternary']] * params['n']
     )
     dBPD_Tdtdy = (
         [
             0,
-            kon_T_binary * fu_ic * T / Vic,
-            kon_T_binary * fu_ic * BPD_ic / Vic,
-            -kon_E3_ternary * BPD_T / Vic,
-            -koff_T_binary - kon_E3_ternary * E3 / Vic - kdeg_T,
+            params['kon_T_binary'] * params['fu_ic'] * T / params['Vic'],
+            params['kon_T_binary'] * params['fu_ic'] * BPD_ic / params['Vic'],
+            -params['kon_E3_ternary'] * BPD_T / params['Vic'],
+            -params['koff_T_binary'] - params['kon_E3_ternary'] * E3 / params['Vic'] - params['kdeg_T'],
             0,
-            koff_E3_ternary
+            params['koff_E3_ternary']
         ]
-        + [koff_E3_ternary] * n
+        + [params['koff_E3_ternary']] * params['n']
     )
     dBPD_E3dtdy = (
         [
             0,
-            kon_E3_binary * fu_ic * E3 / Vic,
-            -kon_T_ternary * BPD_E3 / Vic,
-            kon_E3_binary * fu_ic * BPD_ic / Vic,
+            params['kon_E3_binary'] * params['fu_ic'] * E3 / params['Vic'],
+            -params['kon_T_ternary'] * BPD_E3 / params['Vic'],
+            params['kon_E3_binary'] * params['fu_ic'] * BPD_ic / params['Vic'],
             0,
-            -koff_E3_binary - kon_T_ternary * T / Vic,
-            koff_T_ternary + kdeg_T
+            -params['koff_E3_binary'] - params['kon_T_ternary'] * T / params['Vic'],
+            params['koff_T_ternary'] + params['kdeg_T']
         ]
-        + [koff_T_ternary + kdeg_T] * (n - 1)  # w.r.t. Ternary_Ub_1, ..., Ternary_Ub_<n-1>. If n == 0, then becomes empty list.
-        + [koff_T_ternary + kdeg_T + ktransit_UPS] * (1 if n > 0 else 0)  # w.r.t. Ternary_Ub_n
+        + [params['koff_T_ternary'] + params['kdeg_T']] * (params['n'] - 1)  # w.r.t. Ternary_Ub_1, ..., Ternary_Ub_<n-1>. If n == 0, then becomes empty list.
+        + [params['koff_T_ternary'] + params['kdeg_T'] + params['ktransit_UPS']] * (1 if params['n'] > 0 else 0)  # w.r.t. Ternary_Ub_n
     )
     dTernarydtdy = (
         [
             0,
             0,
-            kon_T_ternary * BPD_E3 / Vic,
-            kon_E3_ternary * BPD_T / Vic,
-            kon_E3_ternary * E3 / Vic,
-            kon_T_ternary * T / Vic,
-            -(kdeg_T + koff_T_ternary + koff_E3_ternary + ktransit_UPS)
+            params['kon_T_ternary'] * BPD_E3 / params['Vic'],
+            params['kon_E3_ternary'] * BPD_T / params['Vic'],
+            params['kon_E3_ternary'] * E3 / params['Vic'],
+            params['kon_T_ternary'] * T / params['Vic'],
+            -(params['kdeg_T'] + params['koff_T_ternary'] + params['koff_E3_ternary'] + params['ktransit_UPS'])
         ]
-        + [0] * n  # does not depend on Ternary_Ubs
+        + [0] * params['n']  # does not depend on Ternary_Ubs
     )
     dTernary_Ubdtdy_all = []  # initialize empty list for dTernary_Ubdt / dy
-    if n > 0:  # if there are ubiquitinated Ternary complexes
-        for i in range(n):  # for each Ternary complex transit compartment i
-            dTernary_Ub_idtdy = [0] * (7 + n)  # initalize zeros list for dTernary_Ub_i / dt / dy
-            dTernary_Ub_idtdy[6 + i] = ktransit_UPS  # dTernary_Ub_i / dt / d[Ternary_Ub_<i-1>]
-            dTernary_Ub_idtdy[7 + i] = -(kdeg_T + koff_T_ternary + koff_E3_ternary + ktransit_UPS)  # dTernary_Ub_i / dt / d[Ternary_Ub_i]
+    if params['n'] > 0:  # if there are ubiquitinated Ternary complexes
+        for i in range(params['n']):  # for each Ternary complex transit compartment i
+            dTernary_Ub_idtdy = [0] * (7 + params['n'])  # initalize zeros list for dTernary_Ub_i / dt / dy
+            dTernary_Ub_idtdy[6 + i] = params['ktransit_UPS']  # dTernary_Ub_i / dt / d[Ternary_Ub_<i-1>]
+            dTernary_Ub_idtdy[7 + i] = -(params['kdeg_T'] + params['koff_T_ternary'] + params['koff_E3_ternary'] + params['ktransit_UPS'])  # dTernary_Ub_i / dt / d[Ternary_Ub_i]
             dTernary_Ubdtdy_all.append(dTernary_Ub_idtdy)  # append dTernary_Ub_i / dt / dy list to list-of-lists
 
     all_jacs = np.array(  # (7 + n) x (7 + n) array
@@ -187,18 +203,19 @@ def jac_rates_ternary_formation(BPD_ec, BPD_ic, T, E3, BPD_T, BPD_E3, Ternary, *
     )
     return all_jacs
 
-def calc_concentrations(times, y0, max_step = np.inf, rtol = 1e-3, atol = 1e-6):
-    def rates(t, y):
-        return rates_ternary_formation(*y)
+def calc_concentrations(times, y0, params, max_step = np.inf, rtol = 1e-3, atol = 1e-6):
+    def rates(t, y, params):
+        return kinetic_rates(params, *y)
 
-    def jac_rates(t, y):
-        return jac_rates_ternary_formation(*y)
+    def jac_rates(t, y, params):
+        return jac_kinetic_rates(params, *y)
 
     tmin = np.min(times)
     tmax = np.max(times)
-    dtimes = times[1:] - times[:-1]  # intervals between times
+    # dtimes = times[1:] - times[:-1]  # intervals between times
 
     results = integrate.solve_ivp(rates, (tmin, tmax), y0,
+                                  args = (params, ),
                                   method = 'BDF',
                                   t_eval = times,
                                   jac = jac_rates,
@@ -209,6 +226,9 @@ def calc_concentrations(times, y0, max_step = np.inf, rtol = 1e-3, atol = 1e-6):
 
     return results
 
+"""
+Manipulate results from solving system of kinetic rates.
+"""
 def dataframe_concentrations(solve_ivp_result):
     """
     Creates pandas.DataFrame from result object of scipy.integrate.solve_ivp()
