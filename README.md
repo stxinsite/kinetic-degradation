@@ -10,7 +10,7 @@ We maintain a similar notation and denote the species involved in ternary comple
 * BPD_T: BPD-T binary complex.
 * BPD_E3: BPD-E3 binary complex.
 * Ternary: T-BPD-E3 ternary complex.
-* Ternary_Ubs: ubiquitinated ternary complex in increasing order of length of ubiquitin chain.
+* Ternary_Ubs: ubiquitinated ternary complexes in increasing order of length of ubiquitin chain.
   * Ternary_Ub_i: ternary complex with `i` ubiquitin molecules in chain
 
 # Setting up a config file for a system
@@ -67,5 +67,18 @@ Although the extracellular environment is not of interest, the `Vec` parameter s
 The initial value for `BPD_ic` will then presumably be greater than zero.
 
 # Modeling kinetic proofreading as solving an initial value problem
-`max_step` for IVP solver. Set to small value ~ 0.001, because otherwise the solver will overshoot and results at some time points may be negative, which is implausible.
- `calc_concentrations()`
+## Assigning array of inital values
+The kinetic proofreading model supplies rate equations for the amounts of species involved in target protein degradation. The system of ODEs can be solved given initial values. For target protein degradation, the array of initial values `y0` must be an array_like object containing **in this order** the initial amounts of: `BPD_ec`, `BPD_ic`, `T`, `E3`, `BPD_T`, `BPD_E3`, `Ternary`, `Ternary_Ub_1`, ..., `Ternary_Ub_n`.
+
+For ternary complex formation modeling, `y0` will only contain initial values for `BPD_ec`, ..., `Ternary`.
+
+## Solving the IVP
+Import `calc_concentrations()` from `kinetic_proofreading.py`, which wraps `scipy.integrate.solve_ivp()`, and provide the following required arguments:
+- params: a dictionary created by loading a config file
+- times: an array of time at which to evaluate the IVP solution
+- y0: an array of initial values
+
+There are additional optional arguments that are passed to `scipy`'s solver that can affect its performance. Set `max_step` to a small value such 0.001 to prevent the solver from overstepping changes in species amounts. Not specifying `max_step` will run, but the results may contain negative values, which is implausible as amounts must be non-negative.
+
+## Example scripts
+For ternary complex formation modeling, see `ternary_formation.py`.
