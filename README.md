@@ -1,6 +1,7 @@
 # kinetic-degradation
-This repo implements a kinetic proofreading model of protein degradation via the ubiquitin-proteasome system (UPS).
-We denote the species involved in ternary complex formation and target protein degradation as follows:
+This repo implements a kinetic proofreading model of protein degradation via the ubiquitin-proteasome system (UPS) as
+developed by Bartlett et al. (2013) [in this paper](https://doi.org/10.1007/s10928-020-09722-z).
+We maintain a similar notation and denote the species involved in ternary complex formation and target protein degradation as follows:
 
 * BPD_ec: unbound extracellular Bispecific Protein Degrader.
 * BPD_ic: unbound intracellular Bispecific Protein Degrader.
@@ -43,3 +44,20 @@ The config file must contain the following keys:
 - num_cells: number of cells in system
 - Vic: intracellular volume
 - Vec: extracellular volume
+
+## Ternary complex formation as a special case
+For modeling protein degradation, all the parameters in the previous section must be specified. If the process of interest is ternary complex formation, this is just a special case of the kinetic proofreading model in which no ubiquitination or degradation occurs in the cell. To model ternary complex formation, set the following parameters to 0 in the config file:
+- n
+- MTT_deg
+- ktransit_UPS
+- kprod_T
+- kdeg_T
+
+## Intracellular special case
+If extracellular BPD is not of interest (i.e., the BPD has been introduced into cells), set the following parameters to 0 in the config file:
+- PS_cell
+- num_cells
+
+Although the extracellular environment is not of interest, the `Vec` parameter still must be positive to avoid division by zero in the equation for the `BPD_ec` rate. Setting the above parameters to 0 ensures that the rate is always 0, and thus the amount of `BPD_ec` remains constant over time.
+
+The initial value for `BPD_ic` will then presumably be greater than zero. 
