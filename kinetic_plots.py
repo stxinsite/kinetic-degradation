@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import matplotlib.colors
 from matplotlib.ticker import FuncFormatter
 from mpl_toolkits import mplot3d
-import global_
 plt.rcParams["axes.labelsize"] = 20
 plt.rcParams["axes.titlesize"] = 20
 plt.rcParams["figure.figsize"] = (12,9)
@@ -205,40 +204,5 @@ ax = Target_deg_df.plot(
     # title='Ternary complex formation',
     legend = False,
     figsize = (12, 8)
-)
-plt.show()
-
-"""
-BARTLETT SUPPLEMENTARY FIGURE 1 (a)
-Ternary complex formation only.
-"""
-Conc_BPD_ic_arr = np.logspace(base = 10.0, start = -1, stop = 5, num = 50)
-Ternary_formation_arr = np.empty((len(Conc_BPD_ic_arr),2))
-
-for count, conc in enumerate(Conc_BPD_ic_arr):
-    y0 = np.array([BPD_ec, conc * Vic / 1000, T, E3, BPD_T, BPD_E3, Ternary] + Ternary_Ubs)
-    t = np.array([0, 24])
-    results = calc_concentrations(times = t, y0 = y0)
-
-    Ternary_formation_arr[count, 0] = conc
-    Ternary_formation_arr[count, 1] = results.y[6][-1]  # last Ternary complex amount
-
-Ternary_formation_df = pd.DataFrame(Ternary_formation_arr, columns = ['Conc_BPD_ic', 'Ternary'])
-Ternary_formation_df['relative_Ternary'] = Ternary_formation_df['Ternary'] / Ternary_formation_df['Ternary'].max() * 100
-
-ax = Ternary_formation_df.plot(
-    x = 'Conc_BPD_ic',
-    xlabel = 'BPD Concentration (nM)',
-    y = 'relative_Ternary',
-    ylabel = '% Relative Ternary Complex',
-    kind = 'line',
-    xlim = (1e-1, 1e5),
-    ylim = (0, 120),
-    fontsize = 20,
-    logx = True,
-    # title='Ternary complex formation',
-    legend = False,
-    figsize = (12, 8),
-    fontsize = 20
 )
 plt.show()
