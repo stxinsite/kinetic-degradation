@@ -15,7 +15,7 @@ We maintain a similar notation and denote the species involved in ternary comple
 
 # Setting up a config file for a system
 To model a BPD-induced, UPS-mediated target protein degradation system, you must write a config file in YAML
-and save it to the `model_configs\` folder. For example, the full path of the config file could be `model_configs\config.yml`.
+and save it to the `data/` folder. For example, the full path of the config file could be `data/config.yml`.
 
 The config file must contain the following keys:
 <details>
@@ -73,12 +73,18 @@ The kinetic proofreading model supplies rate equations for the amounts of specie
 For ternary complex formation modeling, `y0` will only contain initial values for `BPD_ec`, ..., `Ternary`.
 
 ## Solving the IVP
-Import `calc_concentrations()` from `kinetic_proofreading.py`, which wraps `scipy.integrate.solve_ivp()`, and provide the following required arguments:
-- params: a dictionary created by loading a config file
-- times: an array of time at which to evaluate the IVP solution
-- y0: an array of initial values
+See `bin/run_ternary_formation.py` and `src/kinetic_module/ternary_formation_test.py` for examples of how to solve the system of ODEs over time. `ternary_formation_test.py` contains a test function that takes a `params` argument. The test calls the `calc_concentrations()` function from `src/kinetic_module/kinetic_functions.py`, which wraps `scipy.integrate.solve_ivp()`
 
-There are additional optional arguments that are passed to `scipy`'s solver that can affect its performance. Set `max_step` to a small value such 0.001 to prevent the solver from overstepping changes in species amounts. Not specifying `max_step` will run, but the results may contain negative values, which is implausible as amounts must be non-negative.
+There are additional optional arguments for `calc_concentrations()` that are passed to `scipy`'s solver that can affect its performance. Set `max_step` to a small value such as 0.001 to prevent the solver from overstepping changes in species amounts. Not specifying `max_step` will run successfully, but the results may contain negative values, which is implausible as amounts must be non-negative.
 
-## Example scripts
-For ternary complex formation modeling, see `ternary_formation.py`.
+To run the script from the command line:
+**Linux**
+```
+export PYTHONPATH="$(pwd)/src/"
+python bin/run_ternary_formation.py
+```
+**Windows**
+```
+set PYTHONPATH=%cd%\src\;%PYTHONPATH%
+python bin/run_ternary_formation.py
+```
