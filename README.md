@@ -78,6 +78,7 @@ See `bin/run_ternary_formation.py` and `src/kinetic_module/ternary_formation_tes
 There are additional optional arguments for `calc_concentrations()` that are passed to `scipy`'s solver that can affect its performance. Set `max_step` to a small value such as 0.001 to prevent the solver from overstepping changes in species amounts. Not specifying `max_step` will run successfully, but the results may contain negative values, which is implausible as amounts must be non-negative.
 
 To run the script from the command line:
+
 **Linux**
 ```
 export PYTHONPATH="$(pwd)/src/"
