@@ -82,7 +82,7 @@ def solve_target_degradation(params):
             progress = round((count + 1) / len(Conc_BPD_ec_arr) * 100)
             print(f"Progress: {progress}%")
 
-    np.save('Prop_Target_Deg_Grid.npy', Prop_Target_Deg_Grid)  # save the solved relative Target degradation proportions
+    np.save('saved_objects/Prop_Target_Deg_Grid.npy', Prop_Target_Deg_Grid)  # save the solved relative Target degradation proportions
 
     # 2D contour plot of percent relative Target degradation
     contour_levels = np.linspace(start = 0, stop = 100, num = 20)
