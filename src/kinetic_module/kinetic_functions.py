@@ -299,7 +299,7 @@ def calc_concentrations(params, times, y0, max_step = np.inf, rtol = 1e-3, atol 
     tmax = np.max(times)
     # dtimes = times[1:] - times[:-1]  # intervals between times
 
-    results = integrate.solve_ivp(rates, (tmin, tmax), y0,
+    results = integrate.solve_ivp(rates, (0, tmax), y0,
                                   method = 'BDF',
                                   t_eval = times,
                                   args = (params, ),
@@ -308,7 +308,7 @@ def calc_concentrations(params, times, y0, max_step = np.inf, rtol = 1e-3, atol 
                                   atol = atol,
                                   jac = jac_rates
                                   )
-
+    assert np.all(results.y >= 0), f"Results from solve_ivp() at initial values {y0} are not all non-negative."
     return results
 
 """
