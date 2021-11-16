@@ -1,6 +1,9 @@
-PyYAML
 scipy
 numpy
 pandas
 matplotlib
+seaborn
 tqdm
+PyYAML
+json
+sigfig
