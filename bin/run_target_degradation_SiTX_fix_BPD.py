@@ -17,27 +17,23 @@ with open('./data/SiTX_38404_config.yml', 'r') as file:
 with open('./data/SiTX_38406_config.yml', 'r') as file:
     params_SiTX_38406 = yaml.safe_load(file)
 
-"""
-RUN TEST(S)
-"""
-t = [24]  # time points at which to evaluate solver
-initial_BPD_ec_conc = np.logspace(base = 10.0, start = -1, stop = 5, num = 50) / 1000  # various initial concentrations of BPD_ec (uM)
+t = np.arange(start = 0, stop = 168 + 1, step = 3)  # time points at which to evaluate solver
+initial_BPD_ec_conc = [0.1]  # initial concentration of BPD_ec (uM)
 
 degradation_df_38404 = kinetic_tests.solve_target_degradation(params_SiTX_38404, t, initial_BPD_ec_conc, 'SiTX_38404')
 degradation_df_38406 = kinetic_tests.solve_target_degradation(params_SiTX_38406, t, initial_BPD_ec_conc, 'SiTX_38406')
 
-degradation_df_38404['PROTAC'] = np.repeat('38404', len(initial_BPD_ec_conc))
-degradation_df_38406['PROTAC'] = np.repeat('38406', len(initial_BPD_ec_conc))
+degradation_df_38404['PROTAC'] = np.repeat('38404', len(t))
+degradation_df_38406['PROTAC'] = np.repeat('38406', len(t))
 
 frames = [degradation_df_38404, degradation_df_38406]
 result = pd.concat(frames)
-result.to_csv("saved_objects/SiTX_PROTAC_result.csv")
+result.to_csv("saved_objects/SiTX_PROTAC_fix_BPD_result.csv")
 
-# p = sns.lineplot(data = result, x = 'Conc_BPD_ec', y = 'Target_deg', hue = 'PROTAC', palette = "Set2")
-# plt.xscale('log')
-# plt.xlim(initial_BPD_ec_conc.min(), initial_BPD_ec_conc.max())
+# p = sns.lineplot(data = result, x = 't', y = 'Target_deg', hue = 'PROTAC', palette = "Set2")
+# plt.xlim(t.min(), t.max())
 # plt.ylim(0, 120)
-# plt.xlabel('BPD Concentration (uM)')
+# plt.xlabel('Time (h)')
 # plt.ylabel('% Baseline Target Protein')
-# plt.title(f'Percent baseline Target protein at {str(t[0])} hours')
-# plt.savefig(f'plots/Target_Deg_t={str(t[0])}h.png')
+# plt.title('Percent baseline Target protein at [$BPD_{ec}$] = ' + f'{str(initial_BPD_ec_conc)} uM')
+# plt.savefig(f'plots/Target_Deg_BPD={str(initial_BPD_ec_conc[0])}uM.png')
