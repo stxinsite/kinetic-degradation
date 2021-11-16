@@ -94,7 +94,7 @@ def degradation_fixed_BPD(params, t, initial_BPD_ec_conc, PROTAC_ID):
         figsize = (12, 8)
     )
     plt.savefig(f"plots/Target_Deg_{PROTAC_ID}_BPD_ec={str(initial_BPD_ec_conc)}uM.png")
-    plt.show()
+    # plt.show()
     return Target_deg_df
 
 def degradation_fixed_time(params, t, initial_BPD_ec_conc, PROTAC_ID):
@@ -128,7 +128,7 @@ def degradation_fixed_time(params, t, initial_BPD_ec_conc, PROTAC_ID):
         figsize = (12, 8)
     )
     plt.savefig(f'plots/Target_Deg_{PROTAC_ID}_t={str(t[0])}h.png')
-    plt.show()
+    # plt.show()
     return Target_deg_df
 
 def degradation_vary_BPD_time(params, t, initial_BPD_ec_conc, PROTAC_ID):
@@ -165,7 +165,7 @@ def degradation_vary_BPD_time(params, t, initial_BPD_ec_conc, PROTAC_ID):
     plt.yticks(fontsize = 15)
     plt.yscale('log')
     plt.savefig(f'plots/Target_Deg_{PROTAC_ID}_contour.png')
-    plt.show()
+    # plt.show()
     return Prop_Target_Deg_Grid
 
 def solve_target_degradation(params, t, initial_BPD_ec_conc, PROTAC_ID):
