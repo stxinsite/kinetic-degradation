@@ -23,8 +23,8 @@ initial_BPD_ec_conc = [0.1]  # initial concentration of BPD_ec (uM)
 degradation_df_38404 = kinetic_tests.solve_target_degradation(params_SiTX_38404, t, initial_BPD_ec_conc, 'SiTX_38404')
 degradation_df_38406 = kinetic_tests.solve_target_degradation(params_SiTX_38406, t, initial_BPD_ec_conc, 'SiTX_38406')
 
-degradation_df_38404['PROTAC'] = np.repeat('38404', len(t))
-degradation_df_38406['PROTAC'] = np.repeat('38406', len(t))
+degradation_df_38404['PROTAC'] = '38404'
+degradation_df_38406['PROTAC'] = '38406'
 
 frames = [degradation_df_38404, degradation_df_38406]
 result = pd.concat(frames)
