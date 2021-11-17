@@ -36,7 +36,7 @@ The config file must contain the following keys:
     - Kd_E3_ternary: equilibrium dissociation constant of E3 in ternary complex
     - kon_E3_ternary: kon of BPD-T + E3 -> T-BPD-E3
     - koff_E3_ternary: koff of T-BPD-E3 -> BPD-T + E3
-  </detail>
+  </details>
 
   <details>
     <summary>Other parameters</summary>
