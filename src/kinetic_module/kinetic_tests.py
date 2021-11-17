@@ -78,7 +78,7 @@ def degradation_fixed_BPD(params, t, initial_BPD_ec_conc, PROTAC_ID, save_plot =
     all_Ternary_totals = results_df.filter(regex = 'Ternary.*').sum(axis = 1)  # sum amounts of all Ternary complexes at each time point
 
     Target_deg = T_totals / y0[2] * 100  # percent Target relative to initial value of Target
-    assert np.all(Target_deg <= 100.), "Relative degradation is greater than 100% at some time points."
+    assert np.all(Target_deg <= 101.0), "Target degradation is greater than 100% at some time points."
     relative_Ternary = Ternary_totals / y0[2] * 100  # percent Target in naked Ternary at time points t
     relative_all_Ternary = all_Ternary_totals / y0[2] * 100  # percent Target in all Ternary at time points t
 
@@ -139,7 +139,7 @@ def degradation_fixed_time(params, t, initial_BPD_ec_conc, PROTAC_ID, save_plot 
         relative_all_Ternary.append(all_Ternary_totals / y0[2] * 100)   # percent Target in all Ternary at time points t
 
     Target_deg = pd.concat(Target_deg)
-    assert np.all(Target_deg <= 100.), f"Relative degradation is greater than 100% at some time points."
+    assert np.all(Target_deg <= 101.), f"Relative degradation is greater than 100% at some time points."
     relative_Ternary = pd.concat(relative_Ternary)
     relative_all_Ternary = pd.concat(relative_all_Ternary)
 
@@ -179,7 +179,7 @@ def degradation_vary_BPD_time(params, t, initial_BPD_ec_conc, PROTAC_ID, save_pl
         results_df = kinetic_functions.dataframe_concentrations(results)
         T_totals = results_df.filter(regex = '(.*T)|(Ternary.*)').sum(axis = 1)  # sum amounts of all complexes containing Target at each time point
         Target_deg = T_totals / y0[2] * 100  # divide total Target amount at each time point by initial value of Target
-        assert np.all(Target_deg <= 100.), f"Relative degradation is greater than 100% at some time points."
+        assert np.all(Target_deg <= 101.), f"Relative degradation is greater than 100% at some time points."
 
         Prop_Target_Deg_Grid[count] = Target_deg
 
