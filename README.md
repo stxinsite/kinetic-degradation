@@ -57,6 +57,7 @@ The config file must contain the following keys:
   </details>
 </details>
 
+A sufficient number of kinetic rate parameters **must** be non-null. The `KineticParameters` class can solve for the rest of the unknown dependent parameters given sufficient information using the ratios `Kd = koff / kon` and `alpha = Kd_binary / Kd_ternary` and test for consistency with these ratios if all parameters are provided. 
 
 ## Ternary complex formation as a special case
 For modeling protein degradation, all the parameters in the previous section must be specified. If the process of interest is ternary complex formation, this is just a special case of the kinetic proofreading model in which no ubiquitination or degradation occurs in the cell. To model ternary complex formation, set the following parameters to 0 in the config file:
