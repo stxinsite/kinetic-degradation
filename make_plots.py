@@ -10,24 +10,29 @@ plt.rcParams["axes.labelsize"] = 20
 plt.rcParams["axes.titlesize"] = 20
 plt.rcParams["figure.figsize"] = (12,8)
 
-PROTAC_ID = 'SiTX_38404'
-result = pd.read_csv(f"saved_objects/{PROTAC_ID}_kon_vs_alpha.csv")
+PROTAC_ID = 'SiTX_38406'
+result = pd.read_csv(f"saved_objects/{PROTAC_ID}_Kd_vs_alpha.csv")
 alpha_range = result['alpha'].unique()
-result = result[['Target_deg', 'relative_Ternary', 'relative_all_Ternary', 'alpha', 'kon_T_binary']]
-result_melt = result.melt(id_vars = ['alpha', 'kon_T_binary'])
-result_melt['PROTAC'] = '38404'
+result.head()
+result.shape
+# result = result[['degradation', 'Ternary', 'all_Ternary', 'alpha', 'Kd_T_binary']]
+result = result[['Ternary', 'alpha', 'Kd_T_binary']]
+result_melt = result.melt(id_vars = ['alpha', 'Kd_T_binary'])
+result_melt['Kd_T_binary'] = np.round(result_melt['Kd_T_binary'], 3)
+# result_melt['PROTAC'] = '38404'
 
-result_38406 = pd.read_csv(f"saved_objects/SiTX_38406_kon_vs_alpha.csv")
-result_38406 = result_38406[['Target_deg', 'relative_Ternary', 'relative_all_Ternary', 'alpha', 'kon_T_binary']]
-result_38406_melt = result_38406.melt(id_vars = ['alpha', 'kon_T_binary'])
-result_38406_melt['PROTAC'] = '38406'
+# result_38406 = pd.read_csv(f"saved_objects/SiTX_38406_kon_vs_alpha.csv")
+# result_38406 = result_38406[['Target_deg', 'relative_Ternary', 'relative_all_Ternary', 'alpha', 'kon_T_binary']]
+# result_38406_melt = result_38406.melt(id_vars = ['alpha', 'kon_T_binary'])
+# result_38406_melt['PROTAC'] = '38406'
 
+sns.set_style("whitegrid")
 p = sns.lineplot(
-    data = pd.concat([result_melt, result_38406_melt], ignore_index=True), # result_melt,
+    data = result_melt,
     x = 'alpha',
     y = 'value',
-    hue = 'PROTAC', # 'kon_T_binary',
-    style = 'variable',
+    hue = 'Kd_T_binary',
+    # style = 'variable',
     palette = 'Set2'
 )
 plt.xscale('log')
@@ -35,11 +40,8 @@ plt.xlim(alpha_range.min(), alpha_range.max())
 plt.ylim(0, 120)
 plt.xlabel(r'Cooperativity $\alpha$')
 plt.ylabel('% Baseline Target Protein')
-plt.title(r'Varying $\alpha$ with initial $[BPD]_{ec}$ = 0.1uM at 24h')
-plt.savefig("plots/SiTX_38404&38406_kon_vs_alpha.png")
-
-plt.savefig(f'plots/{PROTAC_ID}_kon_vs_alpha.png')
-
+plt.title(r'Ternary formation initial $[BPD]_{ec}$ = 0.1uM at 24h')
+plt.savefig(f"plots/{PROTAC_ID}_Kd_vs_alpha_Ternary.png")
 
 t = [24]  # time points at which to evaluate solver
 initial_BPD_ec_conc = np.logspace(base = 10.0, start = -1, stop = 5, num = 50) / 1000  # various initial concentrations of BPD_ec (uM)
