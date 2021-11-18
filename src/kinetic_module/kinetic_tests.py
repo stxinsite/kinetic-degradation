@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import multiprocessing as mp
 import matplotlib.pyplot as plt
 import matplotlib.colors
 from matplotlib.ticker import FuncFormatter
@@ -10,9 +11,7 @@ plt.rcParams["axes.labelsize"] = 20
 plt.rcParams["axes.titlesize"] = 20
 plt.rcParams["figure.figsize"] = (12,8)
 
-def initial_values(params):
-    BPD_ec = 0  # nM * Vec / 1000
-    BPD_ic = 0  # nM * Vic / 1000
+def initial_values(params, BPD_ec = 0, BPD_ic = 0):
     T = params['Conc_T_base'] * params['Vic']
     E3 = params['Conc_E3_base'] * params['Vic']
     BPD_T = 0
@@ -21,153 +20,43 @@ def initial_values(params):
     Ternary_Ubs = [0] * params['n']
     return np.array([BPD_ec, BPD_ic, T, E3, BPD_T, BPD_E3, Ternary] + Ternary_Ubs)
 
-def solve_ternary_formation(params):
+def ternary_formation_fixed_time(params, t, initial_BPD_ic_conc, PROTAC_ID, save_plot = True):
     y0 = initial_values(params)
-    t = np.array([0, 24])  # time points at which to evaluate solution to initial value problem
+    y0[1] = conc * params['Vic'] / 1000  # set initial BPD_ic
 
-    Conc_BPD_ic_arr = np.logspace(base = 10.0, start = -1, stop = 5, num = 50)  # various initial concentrations of BPD_ic
-    Ternary_formation_arr = np.empty( (len(Conc_BPD_ic_arr), 2) )  # an array for storing Ternary amounts at concentrations of BPD_ic
-
-    for count, conc in enumerate(tqdm(Conc_BPD_ic_arr)):
-        y0[1] = conc * params['Vic'] / 1000  # set initial BPD_ic
-        results = kinetic_functions.calc_concentrations(params = params, times = t, y0 = y0, max_step = 0.001)  # solve initial value problem
-        assert np.all(results.y >= 0), f"Results from solve_ivp() at initial value [BPD_ic] = {conc} are not all non-negative."
-
-        Ternary_formation_arr[count] = np.array([conc, results.y[6][-1]])  # BPD_ic concentration and latest Ternary amount
-
-    Ternary_formation_df = pd.DataFrame(Ternary_formation_arr, columns = ['Conc_BPD_ic', 'Ternary'])
-    # relative Ternary is percentage of the max Ternary amount across all concentrations of BPD_ic
-    Ternary_formation_df['relative_Ternary'] = Ternary_formation_df['Ternary'] / Ternary_formation_df['Ternary'].max() * 100
-
-    ax = Ternary_formation_df.plot(
-        x = 'Conc_BPD_ic',
-        xlabel = '$BPD_{ic}$ Concentration (nM)',
-        y = 'relative_Ternary',
-        ylabel = '% Relative Ternary Complex',
-        kind = 'line',
-        xlim = (Conc_BPD_ic_arr.min(), Conc_BPD_ic_arr.max()),
-        ylim = (0, 120),
-        fontsize = 20,
-        logx = True,
-        title='Ternary complex formation as function of BPD exposure\n using parameters from BTK PROTAC system',
-        legend = False,
-    )
-    plt.savefig("plots/Relative_Ternary_Formation.png")
-    plt.show()
-
-def degradation_fixed_BPD(params, t, initial_BPD_ec_conc, PROTAC_ID, save_plot = True):
+def calc_degradation_curve(initial_BPD_ec_conc, t, params):
     """
-    Solve target protein degradation and ternary formation for fixed initial BPD_ec at time points t.
+    Calculates target protein degradation and ternary formation curves
+    for fixed initial extracellular degrader concentration at time points t.
 
     Args:
-        params: dict; key-value pairs of all required parameters.
-        t: array_like; time points at which to evaluate the solver.
         initial_BPD_ec_conc: float; initial value of BPD_ec concentration.
-        PROTAC_ID: string; PROTAC identifier.
+        t: array_like; time points at which to calculate.
+        params: dict; passed to kinetic_functions.calc_concentrations().
 
     Returns:
-        Target_deg_df: DataFrame; percent Target degradation relative to baseline at time points
+        result: pd.DataFrame; percent degradation and ternary formation relative to baseline Target at time points
     """
-    y0 = initial_values(params)
-    y0[0] = initial_BPD_ec_conc * params['Vec']  # set initial BPD_ec
-    results = kinetic_functions.calc_concentrations(params = params, times = t, y0 = y0, max_step = 0.001)  # solve initial value problem
-    results_df = kinetic_functions.dataframe_concentrations(results)
+    initial_BPD_ec = initial_BPD_ec_conc * params['Vec']
+    y0 = initial_values(params, BPD_ec = initial_BPD_ec)
+    concentrations = kinetic_functions.calc_concentrations(params, t, y0, max_step = 0.001)
+    concentrations_df = kinetic_functions.dataframe_concentrations(concentrations)
 
-    T_totals = results_df.filter(regex = '(.*T)|(Ternary.*)').sum(axis = 1)  # sum amounts of all complexes containing Target at each time point
-    Ternary_totals = results_df['Ternary']  # amounts of naked Ternary at each time point
-    all_Ternary_totals = results_df.filter(regex = 'Ternary.*').sum(axis = 1)  # sum amounts of all Ternary complexes at each time point
+    T_totals = concentrations_df.filter(regex = '(.*T)|(Ternary.*)').sum(axis = 1)  # pd.Series: total amounts of Target at time points t
+    Ternary_totals = concentrations_df['Ternary']  # pd.Series: amounts of un-ubiquitinated Ternary at time points t
+    all_Ternary_totals = concentrations_df.filter(regex = 'Ternary.*').sum(axis = 1)  # pd.Series: total amounts of Ternary at time points t
 
-    Target_deg = T_totals / y0[2] * 100  # percent Target relative to initial value of Target
-    assert np.all(Target_deg <= 101.0), "Target degradation is greater than 100% at some time points."
-    relative_Ternary = Ternary_totals / y0[2] * 100  # percent Target in naked Ternary at time points t
-    relative_all_Ternary = all_Ternary_totals / y0[2] * 100  # percent Target in all Ternary at time points t
+    relative_T = T_totals / y0[2] * 100  # percent total Target relative to baseline Target
+    relative_Ternary = Ternary_totals / y0[2] * 100  # percent Ternary relative to baseline Target
+    relative_all_Ternary = all_Ternary_totals / y0[2] * 100  # percent total Ternary relative to baseline Target
 
-    Target_deg_df = pd.DataFrame({
+    result = pd.DataFrame({
         't': t,
-        'Target_deg': Target_deg,
-        'relative_Ternary': relative_Ternary,
-        'relative_all_Ternary': relative_all_Ternary
+        'degradation': relative_T,
+        'Ternary': relative_Ternary,
+        'all_Ternary': relative_all_Ternary
     })
-
-    if save_plot:
-        ax = Target_deg_df.plot(
-            x = 't',
-            xlabel = 'Time (h)',
-            y = 'Target_deg',
-            ylabel = '% Baseline Target Protein',
-            kind = 'line',
-            xlim = (t.min(), t.max()),
-            ylim = (0, 120),
-            xticks = np.arange(start = t.min(), stop = t.max() + 1, step = 24),
-            fontsize = 20,
-            title=f'Percent baseline Target protein over time\n with {PROTAC_ID}' + ' at [$BPD_{ec}$] = ' + f'{str(initial_BPD_ec_conc)} uM',
-            legend = False,
-            figsize = (12, 8)
-        )
-        plt.savefig(f"plots/Target_Deg_{PROTAC_ID}_BPD_ec={str(initial_BPD_ec_conc)}uM.png")
-
-    return Target_deg_df
-
-def degradation_fixed_time(params, t, initial_BPD_ec_conc, PROTAC_ID, save_plot = True):
-    """
-    Solve target protein degradation and ternary formation for fixed time point at initial values of BPD_ec.
-
-    Args:
-        params: dict; key-value pairs of all required parameters.
-        t: float; time points at which to evaluate the solver.
-        initial_BPD_ec_conc: array_like; initial values of BPD_ec concentration.
-        PROTAC_ID: string; PROTAC identifier.
-
-    Returns:
-        Target_deg_df: DataFrame; percent Target degradation relative to baseline at time points
-    """
-    y0 = initial_values(params)
-    Target_deg = []
-    relative_Ternary = []
-    relative_all_Ternary = []
-    for conc in tqdm(initial_BPD_ec_conc):
-        y0[0] = conc * params['Vec']  # set initial BPD_ec
-        results = kinetic_functions.calc_concentrations(params = params, times = t, y0 = y0, max_step = 0.001)
-        results_df = kinetic_functions.dataframe_concentrations(results)
-
-        T_totals = results_df.filter(regex = '(.*T)|(Ternary.*)').sum(axis = 1)  # sum amounts of all complexes containing Target at time t
-        Ternary_totals = results_df['Ternary']  # amount of Ternary at time t
-        all_Ternary_totals = results_df.filter(regex = 'Ternary.*').sum(axis = 1)  # sum amounts of all Ternary complexes at time t
-
-        Target_deg.append(T_totals / y0[2] * 100)  # percent Target relative to initial value of Target
-        relative_Ternary.append(Ternary_totals / y0[2] * 100)  # percent Target in naked Ternary at time points t
-        relative_all_Ternary.append(all_Ternary_totals / y0[2] * 100)   # percent Target in all Ternary at time points t
-
-    Target_deg = pd.concat(Target_deg)
-    assert np.all(Target_deg <= 101.), f"Relative degradation is greater than 100% at some time points."
-    relative_Ternary = pd.concat(relative_Ternary)
-    relative_all_Ternary = pd.concat(relative_all_Ternary)
-
-    Target_deg_df = pd.DataFrame({
-        'Conc_BPD_ec': initial_BPD_ec_conc,
-        'Target_deg': Target_deg,
-        'relative_Ternary': relative_Ternary,
-        'relative_all_Ternary': relative_all_Ternary
-    })
-
-    if save_plot:
-        ax = Target_deg_df.plot(
-            x = 'Conc_BPD_ec',
-            xlabel = 'BPD Concentration (uM)',
-            y = 'Target_deg',
-            ylabel = '% Baseline Target Protein',
-            kind = 'line',
-            xlim = (initial_BPD_ec_conc.min(), initial_BPD_ec_conc.max()),
-            ylim = (0, 120),
-            fontsize = 20,
-            logx = True,
-            title=f'Percent baseline Target protein at {str(t[0])} hours\n with {PROTAC_ID}',
-            legend = False,
-            figsize = (12, 8)
-        )
-        plt.savefig(f'plots/Target_Deg_{PROTAC_ID}_t={str(t[0])}h.png')
-
-    return Target_deg_df
+    return result
 
 def degradation_vary_BPD_time(params, t, initial_BPD_ec_conc, PROTAC_ID, save_plot = True):
     y0 = initial_values(params)
@@ -207,19 +96,21 @@ def degradation_vary_BPD_time(params, t, initial_BPD_ec_conc, PROTAC_ID, save_pl
 
     return Prop_Target_Deg_Grid
 
-def solve_target_degradation(params, t, initial_BPD_ec_conc, PROTAC_ID, save_plot = True):
+def solve_target_degradation(initial_BPD_ec_concs, t, params, PROTAC_ID):
     """
-    RELATIVE PROTEIN DEGRADATION OVER TIME AND BPD CONCENTRATION
+    Calculates target protein degradation and ternary formation curves
+    for various initial BPD_ec concentrations at time points t.
 
     Args:
-        params: dict; key-value pairs of all required parameters.
-        t: array_like; time points at which to evaluate the solver.
-        initial_BPD_ec: array_like; initial values of BPD_ec concentration.
+        initial_BPD_ec_concs: array_like; initial values of BPD_ec concentrations.
+        t: array_like; time points at which to calculate.
+        params: dict; passed to kinetic_functions.calc_concentrations().
         PROTAC_ID: string; PROTAC identifier.
     """
-    if len(initial_BPD_ec_conc) == 1:
-        return degradation_fixed_BPD(params, t, initial_BPD_ec_conc[0], PROTAC_ID, save_plot)
-    elif len(t) == 1:
-        return degradation_fixed_time(params, t, initial_BPD_ec_conc, PROTAC_ID, save_plot)
-    else:
-        return degradation_vary_BPD_time(params, t, initial_BPD_ec_conc, PROTAC_ID, save_plot)
+    pool = mp.Pool(processes=mp.cpu_count())
+    inputs = [(conc, t, params) for conc in initial_BPD_ec_concs]
+    outputs = pool.starmap(calc_degradation_curve, inputs)
+    pool.close()
+    pool.join()
+    result = pd.concat(outputs, ignore_index = True)
+    return result
