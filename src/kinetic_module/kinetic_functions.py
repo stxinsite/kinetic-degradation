@@ -4,6 +4,16 @@ import scipy.integrate as integrate
 from matplotlib import pyplot as plt
 
 """
+To do:
+- how to assert plausibility of solve_ivp() results
+    - all values should be non-negative
+    - but because of numerical solver some values can be negative
+        - these values must be close to zero
+    - current implementation: recursively halve max_step until all results are non-negative
+"""
+
+
+"""
 Functions in KINETIC RATES section must be provided `params` dictionary with the following fields:
 
 alpha: cooperativity
@@ -308,7 +318,11 @@ def calc_concentrations(params, times, y0, max_step = np.inf, rtol = 1e-3, atol 
                                   atol = atol,
                                   jac = jac_rates
                                   )
-    assert np.all(results.y >= 0), f"Results from solve_ivp() at initial values {y0} are not all non-negative."
+    if not np.all(results.y >= 0):
+        print(params)
+        print(results.y)
+        return calc_concentrations(params, times, y0, max_step = max_step / 2)  # halve the max_step
+    # assert np.all(results.y >= 0), f"Results from solve_ivp() at initial values {y0} are not all non-negative."
     return results
 
 """
