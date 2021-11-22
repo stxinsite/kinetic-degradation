@@ -24,7 +24,7 @@ We maintain a similar notation as used by Bartlett et al. and denote the amounts
 
 # Run Kinetic Model
 ## Provide a config file for a system
-To model a target protein - degrader - E3 ligase system, you must write a config file in YAML or JSON and save it to the `data/` folder.
+To model a target protein + degrader + E3 ligase system, you must write a config file in YAML or JSON and save it to the `data/` folder.
 
 The config file must contain the following keys:
 <details>
@@ -35,6 +35,7 @@ The config file must contain the following keys:
   <details>
     <summary>Kinetic rate parameters</summary>
 
+    ```yaml
     - alpha: ternary complex cooperativity
     - Kd_T_binary: equilibrium dissociation constant of BPD-T binary complex
     - kon_T_binary: kon of BPD + T -> BPD-T
@@ -48,14 +49,16 @@ The config file must contain the following keys:
     - Kd_E3_ternary: equilibrium dissociation constant of E3 in ternary complex
     - kon_E3_ternary: kon of BPD-T + E3 -> T-BPD-E3
     - koff_E3_ternary: koff of T-BPD-E3 -> BPD-T + E3
+    ```
   </details>
 
   <details>
     <summary>Other parameters</summary>
 
+    ```yaml
     - n: number of ubiquitination steps before degradation
     - MTT_deg: mean transit time of degradation
-    - ktransit_UPS: transit rate for delay between each ubiquitination step
+    - ktransit_UPS: transit rate for delay between each ubiquitination step ((n+1) / MTT_deg)
     - fu_ec: fraction unbound extracellular BPD
     - fu_ic: fraction unbound intracellular BPD
     - PS_cell: permeability-surface area product
@@ -66,12 +69,13 @@ The config file must contain the following keys:
     - num_cells: number of cells in system
     - Vic: intracellular volume
     - Vec: extracellular volume
+    ```
   </details>
 
   </blockquote>
 </details>
 
-A sufficient number of kinetic rate parameters **must** be non-null. The `KineticParameters` class can solve for the rest of the unknown dependent parameters given sufficient information using the ratios `Kd = koff / kon` and `alpha = Kd_binary / Kd_ternary` and test for consistency with these ratios if all parameters are provided.
+A sufficient number of kinetic rate parameters **must** be defined. The `KineticParameters` class can solve for the rest of the unknown dependent parameters given sufficient information using the ratios `Kd = koff / kon` and `alpha = Kd_binary / Kd_ternary` and test for consistency with these ratios if all parameters are provided.
 
 ## Ternary complex formation as a special case
 For modeling protein degradation, all the parameters in the previous section must be specified. If the process of interest is ternary complex formation, this is just a special case of the kinetic proofreading model in which no ubiquitination or degradation occurs in the cell. To model ternary complex formation, set the following parameters to 0 in the config file:
