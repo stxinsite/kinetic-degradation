@@ -38,16 +38,16 @@ The config file must contain the following keys (with units in parentheses):
     ```yaml
     - alpha: ternary complex cooperativity
     - Kd_T_binary (uM): equilibrium dissociation constant of BPD-T binary complex
-    - kon_T_binary (L/umol/h): kon of BPD + T -> BPD-T
+    - kon_T_binary (1/uM/h): kon of BPD + T -> BPD-T
     - koff_T_binary (1/h): koff of BPD-T -> BPD + T
     - Kd_T_ternary (uM): equilibrium dissociation constant of T in ternary complex
-    - kon_T_ternary (L/umol/h): kon of BPD-E3 + T -> T-BPD-E3
+    - kon_T_ternary (1/uM/h): kon of BPD-E3 + T -> T-BPD-E3
     - koff_T_ternary (1/h): koff of T-BPD-E3 -> BPD-E3 + T
     - Kd_E3_binary (uM): equilibrium dissociation constant of BPD-E3 binary complex
-    - kon_E3_binary (L/umol/h): kon of BPD + E3 -> BPD-E3
+    - kon_E3_binary (1/uM/h): kon of BPD + E3 -> BPD-E3
     - koff_E3_binary (1/h): koff of BPD-E3 -> BPD + E3
     - Kd_E3_ternary (uM): equilibrium dissociation constant of E3 in ternary complex
-    - kon_E3_ternary (L/umol/h): kon of BPD-T + E3 -> T-BPD-E3
+    - kon_E3_ternary (1/uM/h): kon of BPD-T + E3 -> T-BPD-E3
     - koff_E3_ternary (1/h): koff of T-BPD-E3 -> BPD-T + E3
     ```
   </details>
