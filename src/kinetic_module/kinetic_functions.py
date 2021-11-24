@@ -330,11 +330,11 @@ RESULT MANIPULATION AND VISUALIZATION
 """
 def dataframe_concentrations(solve_ivp_result):
     """
-    Creates pandas.DataFrame from result object of scipy.integrate.solve_ivp()
+    Create pandas.DataFrame from result object of scipy.integrate.solve_ivp()
+    where [i,j] is amount of species j at time i.
 
     Args:
-
-    solve_ivp_result: Bunch; result returned by scipy.integrate.solve_ivp().
+        solve_ivp_result: OptimizeResult; result returned by scipy.integrate.solve_ivp().
     """
     num_species = solve_ivp_result.y.shape[0]  # total number of species in system
     num_Ub_compartments = num_species - 7  # ubiquitin compartments occur after the first 7 species. See y0 in calc_concentrations().
