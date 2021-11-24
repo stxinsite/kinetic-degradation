@@ -11,7 +11,7 @@ pip install -r requirements.txt
 ```
 
 ## Notation
-We maintain a similar notation as used by Bartlett et al. and denote the amounts of species involved in the UPS as follows:
+We maintain a similar notation as used by Bartlett et al. and denote the amounts of species involved in the UPS as follows. For consistency, ensure that all initial values and parameter measurements **are in the same units**. We will use **umol** for amount units:
 
 * BPD_ec: unbound extracellular Bispecific Protein Degrader.
 * BPD_ic: unbound intracellular Bispecific Protein Degrader.
@@ -26,7 +26,7 @@ We maintain a similar notation as used by Bartlett et al. and denote the amounts
 ## Provide a config file for a system
 To model a target protein + degrader + E3 ligase system, you must write a config file in YAML or JSON and save it to the `data/` folder.
 
-The config file must contain the following keys:
+The config file must contain the following keys (with units in parentheses):
 <details>
   <summary>Click to expand</summary>
 
@@ -37,18 +37,18 @@ The config file must contain the following keys:
 
     ```yaml
     - alpha: ternary complex cooperativity
-    - Kd_T_binary: equilibrium dissociation constant of BPD-T binary complex
-    - kon_T_binary: kon of BPD + T -> BPD-T
-    - koff_T_binary: koff of BPD-T -> BPD + T
-    - Kd_T_ternary: equilibrium dissociation constant of T in ternary complex
-    - kon_T_ternary: kon of BPD-E3 + T -> T-BPD-E3
-    - koff_T_ternary: koff of T-BPD-E3 -> BPD-E3 + T
-    - Kd_E3_binary: equilibrium dissociation constant of BPD-E3 binary complex
-    - kon_E3_binary: kon of BPD + E3 -> BPD-E3
-    - koff_E3_binary: koff of BPD-E3 -> BPD + E3
-    - Kd_E3_ternary: equilibrium dissociation constant of E3 in ternary complex
-    - kon_E3_ternary: kon of BPD-T + E3 -> T-BPD-E3
-    - koff_E3_ternary: koff of T-BPD-E3 -> BPD-T + E3
+    - Kd_T_binary (uM): equilibrium dissociation constant of BPD-T binary complex
+    - kon_T_binary (L/umol/h): kon of BPD + T -> BPD-T
+    - koff_T_binary (1/h): koff of BPD-T -> BPD + T
+    - Kd_T_ternary (uM): equilibrium dissociation constant of T in ternary complex
+    - kon_T_ternary (L/umol/h): kon of BPD-E3 + T -> T-BPD-E3
+    - koff_T_ternary (1/h): koff of T-BPD-E3 -> BPD-E3 + T
+    - Kd_E3_binary (uM): equilibrium dissociation constant of BPD-E3 binary complex
+    - kon_E3_binary (L/umol/h): kon of BPD + E3 -> BPD-E3
+    - koff_E3_binary (1/h): koff of BPD-E3 -> BPD + E3
+    - Kd_E3_ternary (uM): equilibrium dissociation constant of E3 in ternary complex
+    - kon_E3_ternary (L/umol/h): kon of BPD-T + E3 -> T-BPD-E3
+    - koff_E3_ternary (1/h): koff of T-BPD-E3 -> BPD-T + E3
     ```
   </details>
 
@@ -57,18 +57,18 @@ The config file must contain the following keys:
 
     ```yaml
     - n: number of ubiquitination steps before degradation
-    - MTT_deg: mean transit time of degradation
-    - ktransit_UPS: transit rate for delay between each ubiquitination step ((n+1) / MTT_deg)
+    - MTT_deg (h): mean transit time of degradation
+    - ktransit_UPS (1/h): transit rate for delay between each ubiquitination step ((n+1) / MTT_deg)
     - fu_ec: fraction unbound extracellular BPD
     - fu_ic: fraction unbound intracellular BPD
-    - PS_cell: permeability-surface area product
-    - kprod_T: baseline target protein production rate
-    - kdeg_T: baseline target protein degradation rate
-    - Conc_T_base: baseline target protein concentration
-    - Conc_E3_base: baseline E3 concentration
+    - PS_cell (L/h): permeability-surface area product
+    - kprod_T (umol/h): baseline target protein production rate (Conc_T_base * Vic * kdeg_T)
+    - kdeg_T (1/h): baseline target protein degradation rate
+    - Conc_T_base (uM): baseline target protein concentration
+    - Conc_E3_base (uM): baseline E3 concentration
     - num_cells: number of cells in system
-    - Vic: intracellular volume
-    - Vec: extracellular volume
+    - Vic (L): intracellular volume
+    - Vec (L): extracellular volume
     ```
   </details>
 
