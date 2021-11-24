@@ -16,7 +16,7 @@ MTT_deg: 0.017
 ktransit_UPS: 294
 fu_ec: 1
 fu_ic: 1
-PS_cell: 1.0e-12
+PS_cell: 1.24e-12
 kprod_T: 4.0e-16
 kdeg_T: 0.1
 Conc_T_base: 0.001
