@@ -1,34 +1,40 @@
 import numpy as np
 import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
 import yaml
+import multiprocessing as mp
 import kinetic_module.kinetic_tests as kinetic_tests
-plt.rcParams["axes.labelsize"] = 20
-plt.rcParams["axes.titlesize"] = 20
-plt.rcParams["figure.figsize"] = (12,8)
+from kinetic_module.calc_full_config import KineticParameters
 
-"""
-LOAD PARAMETERS FROM CONFIG
-"""
-with open('./data/SiTX_38404_config.yml', 'r') as file:
-    params_SiTX_38404 = yaml.safe_load(file)
+if __name__ == '__main__':
+    with open('./data/SiTX_38404_config.yml', 'r') as file:
+        params_38404 = yaml.safe_load(file)
 
-with open('./data/SiTX_38406_config.yml', 'r') as file:
-    params_SiTX_38406 = yaml.safe_load(file)
+    with open('./data/SiTX_38406_config.yml', 'r') as file:
+        params_38406 = yaml.safe_load(file)
 
-t = np.arange(start = 0, stop = 168 + 1, step = 3)  # time points at which to evaluate solver
-initial_BPD_ec_conc = [0.1]  # initial concentration of BPD_ec (uM)
+    Params_38404 = KineticParameters(params_38404)
+    Params_38406 = KineticParameters(params_38406)
 
-degradation_df_38404 = kinetic_tests.solve_target_degradation(params_SiTX_38404, t, initial_BPD_ec_conc, 'SiTX_38404')
-degradation_df_38406 = kinetic_tests.solve_target_degradation(params_SiTX_38406, t, initial_BPD_ec_conc, 'SiTX_38406')
+    if not (Params_38404.is_fully_defined() and Params_38406.is_fully_defined()):
+        print("Kinetic parameters are not consistent")
+        exit()
+    else:
+        print("Kinetic parameters are consistent")
+        full_params_38404 = Params_38404.get_dict()
+        full_params_38406 = Params_38406.get_dict()
 
-degradation_df_38404['PROTAC'] = '38404'
-degradation_df_38406['PROTAC'] = '38406'
+    initial_BPD_ec_concs = [0.1]  # initial concentrations of BPD_ec (uM)
+    t = np.linspace(0, 24, num=50)  # time points at which to evaluate solver
 
-frames = [degradation_df_38404, degradation_df_38406]
-result = pd.concat(frames)
-result.to_csv("saved_objects/SiTX_PROTAC_fix_BPD_result.csv")
+    pool = mp.Pool(processes=mp.cpu_count())
+    inputs = [(initial_BPD_ec_concs, t, params) for params in [full_params_38404, full_params_38406]]
+    outputs = pool.starmap(kinetic_tests.solve_target_degradation, inputs)
+    pool.close()
+    pool.join()
+
+    result = pd.concat(outputs)
+    result['PROTAC'] = np.repeat(np.array(['PROTAC 1', 'ACBI1']), repeats = len(initial_BPD_ec_concs) * len(t))
+    result.to_csv("./saved_objects/SiTX_38404+38406_DEG.csv")
 
 # p = sns.lineplot(data = result, x = 't', y = 'Target_deg', hue = 'PROTAC', palette = "Set2")
 # plt.xlim(t.min(), t.max())
