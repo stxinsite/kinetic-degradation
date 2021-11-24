@@ -61,13 +61,14 @@ def calc_degradation_curve(initial_BPD_ec_conc, t, params):
         concentrations = kinetic_functions.calc_concentrations(params, t, y0, max_step = 0.001)
         concentrations_df = kinetic_functions.dataframe_concentrations(concentrations)  # rows are time points, columns are species
 
+        T_total_baseline = np.sum(np.concatenate((y0[[2,4]], y0[6:])))
         T_totals = concentrations_df.filter(regex = '(.*T)|(Ternary.*)').sum(axis = 1)  # pd.Series: total amounts of Target at time points t
         Ternary_totals = concentrations_df['Ternary']  # pd.Series: amounts of un-ubiquitinated Ternary at time points t
         all_Ternary_totals = concentrations_df.filter(regex = 'Ternary.*').sum(axis = 1)  # pd.Series: total amounts of Ternary at time points t
 
-        relative_T = T_totals / y0[2] * 100  # percent total Target relative to baseline Target
-        relative_Ternary = Ternary_totals / y0[2] * 100  # percent Ternary relative to baseline Target
-        relative_all_Ternary = all_Ternary_totals / y0[2] * 100  # percent total Ternary relative to baseline Target
+        relative_T = T_totals / T_total_baseline * 100  # percent total Target relative to baseline Target
+        relative_Ternary = Ternary_totals / T_total_baseline * 100  # percent Ternary relative to baseline Target
+        relative_all_Ternary = all_Ternary_totals / T_total_baseline * 100  # percent total Ternary relative to baseline Target
 
         result = pd.DataFrame({
             't': t,
@@ -76,6 +77,9 @@ def calc_degradation_curve(initial_BPD_ec_conc, t, params):
             'all_Ternary': relative_all_Ternary
         })
         return result
+
+# def calc_DCmax(initial_BPD_ec_conc, t, params):
+
 
 def solve_target_degradation(initial_BPD_ec_concs, t, params):
     """
@@ -102,6 +106,7 @@ def solve_target_degradation(initial_BPD_ec_concs, t, params):
 
 def degradation_vary_BPD_time(params, t, initial_BPD_ec_conc, PROTAC_ID, save_plot = True):
         y0 = initial_values(params)
+        T_total_baseline = np.sum(np.concatenate((y0[[2,4]], y0[6:])))
         Prop_Target_Deg_Grid = np.empty( (len(initial_BPD_ec_conc), len(t)) )  # array to store percent relative Target protein degradation
 
         for count, conc in enumerate(tqdm(initial_BPD_ec_conc)):
@@ -109,7 +114,7 @@ def degradation_vary_BPD_time(params, t, initial_BPD_ec_conc, PROTAC_ID, save_pl
             results = kinetic_functions.calc_concentrations(params = params, times = t, y0 = y0, max_step = 0.001)  # solve initial value problem
             results_df = kinetic_functions.dataframe_concentrations(results)
             T_totals = results_df.filter(regex = '(.*T)|(Ternary.*)').sum(axis = 1)  # sum amounts of all complexes containing Target at each time point
-            Target_deg = T_totals / y0[2] * 100  # divide total Target amount at each time point by initial value of Target
+            Target_deg = T_totals / T_total_baseline * 100  # divide total Target amount at each time point by initial value of Target
             assert np.all(Target_deg <= 101.), f"Relative degradation is greater than 100% at some time points."
 
             Prop_Target_Deg_Grid[count] = Target_deg
