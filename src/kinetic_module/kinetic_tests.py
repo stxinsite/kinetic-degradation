@@ -76,6 +76,13 @@ def calc_degradation_curve(initial_BPD_ec_conc, t, params):
             'Ternary': relative_Ternary,
             'all_Ternary': relative_all_Ternary
         })
+
+        # calculating Dmax
+        x0 = concentrations.y[:,-1]  # let system state at the last time point be initial guess for steady state
+        steady_state = kinetic_functions.calc_Dmax(x0, params)
+        T_total_steady_state = np.sum(np.concatenate((steady_state[[2,4]], steady_state[6:])))
+        Dmax = 1 - T_total_steady_state / T_total_baseline
+
         return result
 
 # def calc_DCmax(initial_BPD_ec_conc, t, params):

@@ -325,6 +325,40 @@ def calc_concentrations(params, times, y0, max_step = np.inf, rtol = 1e-3, atol 
     # assert np.all(results.y >= 0), f"Results from solve_ivp() at initial values {y0} are not all non-negative."
     return results
 
+def wrap_kinetic_rates(arr, params):
+    return kinetic_rates(params, *arr)
+
+def wrap_jac_kinetic_rates(arr, params):
+    return jac_kinetic_rates(params, *arr)
+
+def calc_Dmax(initial_guess, params):
+    """
+    Solve system steady state, the amounts of species for which the kinetic rates
+    all equal 0.
+
+    Args:
+        initial_guess: array; initial guess for solution
+        params: dict; model config
+    """
+    methods = ['hybr', 'lm']
+    for m in methods:
+        roots = root(
+            wrap_kinetic_rates,
+            initial_guess,
+            jac = wrap_jac_kinetic_rates,
+            args = (params,),
+            method = m
+            )
+        if roots.success and np.all(roots.x >= 0):
+            break
+
+    if (not roots.success) or np.any(roots.x < 0):
+        print(roots.message)
+        return None
+
+    return roots.x
+
+
 """
 RESULT MANIPULATION AND VISUALIZATION
 """
