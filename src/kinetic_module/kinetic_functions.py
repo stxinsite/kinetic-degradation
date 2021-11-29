@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import scipy.integrate as integrate
+from scipy.optimize import root, root_scalar
 from matplotlib import pyplot as plt
 
 """
@@ -277,17 +278,12 @@ def calc_concentrations(params, times, y0, max_step = np.inf, rtol = 1e-3, atol 
     PROTAC-induced target protein degradation via the ubiquitin-proteasome system.
 
     Args:
-
-    params: dict; the parameters for the rate equations.
-
-    times: array_like; the time points at which the amounts are calculated.
-
-    y0: array_like; the initial values of all species in system in the following order:
-                    [BPD_ec, BPD_ic, T, E3, BPD_T, BPD_E3, Ternary, Ternary_Ub_1, ..., Ternary_Ub_n].
-
-    max_step: float; maximum allowed step size for solver.
-
-    rtol, atol: float; relative and absolute tolerances for solver.
+        params: dict; the parameters for the rate equations.
+        times: array_like; the time points at which the amounts are calculated.
+        y0: array_like; the initial values of all species in system in the following order:
+            [BPD_ec, BPD_ic, T, E3, BPD_T, BPD_E3, Ternary, Ternary_Ub_1, ..., Ternary_Ub_n].
+        max_step: float; maximum allowed step size for solver.
+        rtol, atol: float; relative and absolute tolerances for solver.
     """
     def rates(t, y, params):
         """
@@ -305,7 +301,7 @@ def calc_concentrations(params, times, y0, max_step = np.inf, rtol = 1e-3, atol 
         """
         return jac_kinetic_rates(params, *y)
 
-    tmin = np.min(times)
+    # tmin = np.min(times)
     tmax = np.max(times)
     # dtimes = times[1:] - times[:-1]  # intervals between times
 
@@ -331,14 +327,17 @@ def wrap_kinetic_rates(arr, params):
 def wrap_jac_kinetic_rates(arr, params):
     return jac_kinetic_rates(params, *arr)
 
-def calc_Dmax(initial_guess, params):
+def solve_steady_state(initial_guess, params):
     """
-    Solve system steady state, the amounts of species for which the kinetic rates
-    all equal 0.
+    Solve system steady state, the amounts of species for which all kinetic rates
+    equal 0.
 
     Args:
         initial_guess: array; initial guess for solution
         params: dict; model config
+
+    Returns:
+        array; amounts of species at steady state
     """
     methods = ['hybr', 'lm']
     for m in methods:
@@ -358,6 +357,18 @@ def calc_Dmax(initial_guess, params):
 
     return roots.x
 
+def calc_Dmax(params, times, y0):
+    """
+    Returns:
+        float; maximum percent target protein degradation
+    """
+    result = calc_concentrations(params, times, y0, max_step = 0.001)
+    init_guess = result.y[:,-1]  # system state at the last time point
+    steady_state = solve_steady_state(init_guess, params)
+    T_total_steady_state = np.sum(np.concatenate((steady_state[[2,4]], steady_state[6:])))
+    T_total_baseline = np.sum(np.concatenate((y0[[2,4]], y0[6:])))
+    Dmax = 1 - T_total_steady_state / T_total_baseline
+    return Dmax
 
 """
 RESULT MANIPULATION AND VISUALIZATION
