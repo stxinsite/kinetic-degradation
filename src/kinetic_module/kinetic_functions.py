@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import scipy.integrate as integrate
-from scipy.optimize import root, root_scalar
+from scipy.optimize import root
 from matplotlib import pyplot as plt
 
 """
@@ -272,7 +272,7 @@ def jac_kinetic_rates(params, BPD_ec, BPD_ic, T, E3, BPD_T, BPD_E3, Ternary, *Te
 
     return all_jacs
 
-def calc_concentrations(params, times, y0, max_step = np.inf, rtol = 1e-3, atol = 1e-6):
+def calc_concentrations(params, times, y0, max_step = np.inf, T_total_baseline = None, T_total_steady_state = None):
     """
     Solve the initial value problem for the amounts of species (unbound, binary complexes, ternary complexes) in
     PROTAC-induced target protein degradation via the ubiquitin-proteasome system.
@@ -283,9 +283,8 @@ def calc_concentrations(params, times, y0, max_step = np.inf, rtol = 1e-3, atol 
         y0: array_like; the initial values of all species in system in the following order:
             [BPD_ec, BPD_ic, T, E3, BPD_T, BPD_E3, Ternary, Ternary_Ub_1, ..., Ternary_Ub_n].
         max_step: float; maximum allowed step size for solver.
-        rtol, atol: float; relative and absolute tolerances for solver.
     """
-    def rates(t, y, params):
+    def rates(t, y, params, T_total_baseline, T_total_steady_state):
         """
         Returns ODEs evaluated at *y with params.
 
@@ -293,13 +292,18 @@ def calc_concentrations(params, times, y0, max_step = np.inf, rtol = 1e-3, atol 
         """
         return kinetic_rates(params, *y)
 
-    def jac_rates(t, y, params):
+    def jac_rates(t, y, params, T_total_baseline, T_total_steady_state):
         """
         Returns Jacobian of ODEs with respect to *y evaluated at *y.
 
         Must have identical call signature as rates().
         """
         return jac_kinetic_rates(params, *y)
+
+    def t_half_event(t, y, params, T_total_baseline, T_total_steady_state):
+        C = 0.5 * (T_total_baseline - T_total_steady_state)
+        T_total_at_t = np.sum(np.concatenate((y[[2,4]], y[6:])))
+        return T_total_at_t - C
 
     # tmin = np.min(times)
     tmax = np.max(times)
@@ -308,16 +312,16 @@ def calc_concentrations(params, times, y0, max_step = np.inf, rtol = 1e-3, atol 
     results = integrate.solve_ivp(rates, (0, tmax), y0,
                                   method = 'BDF',
                                   t_eval = times,
-                                  args = (params, ),
+                                  args = (params, T_total_baseline, T_total_steady_state),
                                   max_step = max_step,
-                                  rtol = rtol,
-                                  atol = atol,
-                                  jac = jac_rates
+                                  jac = jac_rates,
+                                  events = t_half_event if (T_total_baseline is not None) and (T_total_steady_state is not None) else None
                                   )
     if not np.all(results.y >= 0):
         print(params)
         print(results.y)
-        return calc_concentrations(params, times, y0, max_step = max_step / 2)  # halve the max_step
+        max_step = max_step / 2
+        return calc_concentrations(params, times, y0, max_step, T_total_baseline, T_total_steady_state)  # halve the max_step
     # assert np.all(results.y >= 0), f"Results from solve_ivp() at initial values {y0} are not all non-negative."
     return results
 
@@ -369,6 +373,23 @@ def calc_Dmax(params, times, y0):
     T_total_baseline = np.sum(np.concatenate((y0[[2,4]], y0[6:])))
     Dmax = 1 - T_total_steady_state / T_total_baseline
     return Dmax
+
+def calc_t_half(params, times, y0):
+    """
+    Find time t at which total Target amount reaches halfway between baseline and
+    steady state.
+    """
+    result = calc_concentrations(params, times, y0, max_step = 0.001)
+    init_guess = result.y[:,-1]  # system state at the last time point
+    steady_state = solve_steady_state(init_guess, params)
+    T_total_steady_state = np.sum(np.concatenate((steady_state[[2,4]], steady_state[6:])))
+    T_total_baseline = np.sum(np.concatenate((y0[[2,4]], y0[6:])))
+
+    result_with_events = calc_concentrations(params, times, y0, max_step = 0.001,
+        T_total_baseline = T_total_baseline, T_total_steady_state = T_total_steady_state)
+
+    t_half = result_with_events.t_events[0][0]  # first event type, first time point
+    return t_half
 
 """
 RESULT MANIPULATION AND VISUALIZATION
