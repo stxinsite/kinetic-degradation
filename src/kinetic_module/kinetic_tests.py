@@ -61,6 +61,7 @@ def calc_degradation_curve(initial_BPD_ec_conc, t, params):
         concentrations = kinetic_functions.calc_concentrations(params, t, y0, max_step = 0.001)
         concentrations_df = kinetic_functions.dataframe_concentrations(concentrations)  # rows are time points, columns are species
 
+        # calculating degradation and ternary complex formation
         T_total_baseline = np.sum(np.concatenate((y0[[2,4]], y0[6:])))
         T_totals = concentrations_df.filter(regex = '(.*T)|(Ternary.*)').sum(axis = 1)  # pd.Series: total amounts of Target at time points t
         Ternary_totals = concentrations_df['Ternary']  # pd.Series: amounts of un-ubiquitinated Ternary at time points t
@@ -70,18 +71,17 @@ def calc_degradation_curve(initial_BPD_ec_conc, t, params):
         relative_Ternary = Ternary_totals / T_total_baseline * 100  # percent Ternary relative to baseline Target
         relative_all_Ternary = all_Ternary_totals / T_total_baseline * 100  # percent total Ternary relative to baseline Target
 
+        # calculating Dmax
+        x0 = concentrations.y[:,-1]  # let system state at the last time point be initial guess for steady state
+        Dmax = kinetic_functions.calc_Dmax(params, t, y0, initial_guess = x0)
+
         result = pd.DataFrame({
             't': t,
             'degradation': relative_T,
             'Ternary': relative_Ternary,
-            'all_Ternary': relative_all_Ternary
+            'all_Ternary': relative_all_Ternary,
+            'Dmax': Dmax
         })
-
-        # calculating Dmax
-        x0 = concentrations.y[:,-1]  # let system state at the last time point be initial guess for steady state
-        steady_state = kinetic_functions.calc_Dmax(x0, params)
-        T_total_steady_state = np.sum(np.concatenate((steady_state[[2,4]], steady_state[6:])))
-        Dmax = 1 - T_total_steady_state / T_total_baseline
 
         return result
 
