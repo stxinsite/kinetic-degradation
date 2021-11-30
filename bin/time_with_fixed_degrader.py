@@ -24,7 +24,7 @@ if __name__ == '__main__':
         full_params_38406 = Params_38406.get_dict()
 
     initial_BPD_ec_concs = [0.1]  # initial concentrations of BPD_ec (uM)
-    t = np.linspace(0, 24, num=50)  # time points at which to evaluate solver
+    t = np.linspace(0, 12, num=50)  # time points at which to evaluate solver
 
     pool = mp.Pool(processes=mp.cpu_count())
     inputs = [(initial_BPD_ec_concs, t, params) for params in [full_params_38404, full_params_38406]]
