@@ -305,6 +305,7 @@ def calc_concentrations(params, times, y0, max_step = np.inf, T_total_baseline =
         T_total_at_t = np.sum(np.concatenate((y[[2,4]], y[6:])))
         return T_total_at_t - C
 
+    t_half_event.terminal = True  # if t_half_event = 0, solver will terminate
     # tmin = np.min(times)
     tmax = np.max(times)
     # dtimes = times[1:] - times[:-1]  # intervals between times
@@ -361,14 +362,15 @@ def solve_steady_state(initial_guess, params):
 
     return roots.x
 
-def calc_Dmax(params, times, y0):
+def calc_Dmax(params, times, y0, initial_guess = None):
     """
     Returns:
         float; maximum percent target protein degradation
     """
-    result = calc_concentrations(params, times, y0, max_step = 0.001)
-    init_guess = result.y[:,-1]  # system state at the last time point
-    steady_state = solve_steady_state(init_guess, params)
+    if initial_guess is None:
+        result = calc_concentrations(params, times, y0, max_step = 0.001)
+        initial_guess = result.y[:,-1]  # system state at the last time point
+    steady_state = solve_steady_state(initial_guess, params)
     T_total_steady_state = np.sum(np.concatenate((steady_state[[2,4]], steady_state[6:])))
     T_total_baseline = np.sum(np.concatenate((y0[[2,4]], y0[6:])))
     Dmax = 1 - T_total_steady_state / T_total_baseline
