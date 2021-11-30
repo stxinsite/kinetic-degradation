@@ -1,5 +1,5 @@
 # Kinetic Modeling of Target Protein Degradation
-This repo implements a kinetic proofreading model of protein degradation via the ubiquitin-proteasome system (UPS) as developed by Bartlett et al. (2013) [in this paper](https://doi.org/10.1007/s10928-020-09722-z). The model calculates the amounts of species involved a system over time by solving a system of ordinary differential equations describing the rates of change in species amounts. Scripts in this repo can:
+This repo implements a kinetic proofreading model of protein degradation via the ubiquitin-proteasome system (UPS) as developed by Bartlett et al. (2020) [in this paper](https://doi.org/10.1007/s10928-020-09722-z). The model calculates the amounts of species involved a system over time by solving a system of ordinary differential equations describing the rates of change in species amounts. Scripts in this repo can:
 - Solve for species amounts over time given initial values
 - Calculate target protein degradation (TPD) and ternary complex formation (TCF) relative to baseline target protein amount
 - Model and visualize TPD and TCF with a range of parameter values
@@ -101,7 +101,7 @@ The kinetic proofreading model supplies rate equations for the amounts of specie
 For ternary complex formation modeling, `y0` will only contain initial values for `BPD_ec`, ..., `Ternary`.
 
 ## Solving the IVP
-See `bin/run_ternary_formation.py` and `src/kinetic_module/kinetic_tests.py` for examples of how to solve the system of ODEs over time. `kinetic_tests.py` contains a test function `solve_ternary_formation()` that takes a `params` argument. The test calls the `calc_concentrations()` function from `src/kinetic_module/kinetic_functions.py`, which wraps `scipy.integrate.solve_ivp()`.
+See `bin/time_with_fixed_degrader.py` and `src/kinetic_module/kinetic_tests.py` for examples of how to solve the system of ODEs over time. `kinetic_tests.py` contains a test function `solve_target_degradation()` that takes a `params` argument. The test calls the `calc_concentrations()` function from `src/kinetic_module/kinetic_functions.py`, which wraps `scipy.integrate.solve_ivp()`.
 
 There are additional optional arguments for `calc_concentrations()` that are passed to `scipy`'s solver that can affect its performance. Set `max_step` to a small value such as 0.001 to prevent the solver from overstepping changes in species amounts. Not specifying `max_step` will run successfully, but the results may contain negative values, which is implausible as amounts must be non-negative.
 
