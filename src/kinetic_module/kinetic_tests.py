@@ -42,7 +42,7 @@ def initial_values(params, BPD_ec = 0, BPD_ic = 0):
     Ternary_Ubs = [0] * params['n']
     return np.array([BPD_ec, BPD_ic, T, E3, BPD_T, BPD_E3, Ternary] + Ternary_Ubs)
 
-def calc_degradation_curve(initial_BPD_ec_conc, t, params):
+def calc_degradation_curve(initial_BPD_ec_conc, t, params, return_final_state=True):
         """
         Calculates target protein degradation and ternary formation curves
         for fixed initial extracellular degrader concentration at time points t.
@@ -72,16 +72,23 @@ def calc_degradation_curve(initial_BPD_ec_conc, t, params):
         relative_all_Ternary = all_Ternary_totals / T_total_baseline * 100  # percent total Ternary relative to baseline Target
 
         # calculating Dmax
-        x0 = concentrations.y[:,-1]  # let system state at the last time point be initial guess for steady state
-        Dmax = kinetic_functions.calc_Dmax(params, t, y0, initial_guess = x0)
+        average_relative_T = (relative_T.min() + relative_T.max()) / 2  # average of min and max Target degradation seen so far
+        relative_T_index = pd.Index(relative_T)  # index object
+        # let initial guess for steady state be system near half Target degradation
+        initial_guess_idx = relative_T_index.get_loc(average_relative_T, method = 'nearest')
+        x0 = concentrations.y[:, initial_guess_idx]
+        Dmax = kinetic_functions.calc_Dmax(params, t, y0, initial_guess = x0) * 100  # percent Dmax
 
         result = pd.DataFrame({
-            't': t,
-            'degradation': relative_T,
-            'Ternary': relative_Ternary,
-            'all_Ternary': relative_all_Ternary,
-            'Dmax': Dmax
+        't': t,
+        'degradation': relative_T,
+        'Ternary': relative_Ternary,
+        'all_Ternary': relative_all_Ternary,
+        'Dmax': Dmax
         })
+
+        if return_final_state:
+            return result.iloc[-1:]  # only return system at last time point
 
         return result
 

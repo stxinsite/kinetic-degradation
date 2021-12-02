@@ -346,28 +346,39 @@ def solve_steady_state(initial_guess, params):
     """
     methods = ['hybr', 'lm']
     for m in methods:
+        if m == 'hybr':
+            # options = {'maxfev': 5000}
+            options = {'xtol': 1.49012e-9, 'maxfev': 5000}
+        elif m == 'lm':
+            options = {'xtol': 1.49012e-9, 'maxiter': 5000}
+            # options = {'xtol': 1.49012e-10, 'ftol': 1.49012e-09, 'maxiter': 10000}
+        else:
+            options = None
         roots = root(
             wrap_kinetic_rates,
             initial_guess,
             jac = wrap_jac_kinetic_rates,
             args = (params,),
-            method = m
+            method = m,
+            options = options
             )
         if roots.success and np.all(roots.x >= 0):
             break
 
     if (not roots.success) or np.any(roots.x < 0):
         print(roots.message)
-        return None
+        # return None
 
     return roots.x
 
 def calc_Dmax(params, times, y0, initial_guess = None):
     """
+    Calculate Dmax
     Returns:
         float; maximum percent target protein degradation
     """
     if initial_guess is None:
+        print("Solving IVP because no initial guess.")
         result = calc_concentrations(params, times, y0, max_step = 0.001)
         initial_guess = result.y[:,-1]  # system state at the last time point
     steady_state = solve_steady_state(initial_guess, params)
