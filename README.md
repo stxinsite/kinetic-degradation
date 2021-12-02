@@ -1,5 +1,6 @@
 # Kinetic Modeling of Target Protein Degradation
-This repo implements a kinetic proofreading model of protein degradation via the ubiquitin-proteasome system (UPS) as developed by Bartlett et al. (2013) [in this paper](https://doi.org/10.1007/s10928-020-09722-z). The model calculates the amounts of species involved a system over time by solving a system of ordinary differential equations describing the rates of change in species amounts. Scripts in this repo can:
+This repo implements a kinetic proofreading model of protein degradation motivated by the work of Bartlett et al. (2020).
+This repo implements a kinetic proofreading model of protein degradation via the ubiquitin-proteasome system (UPS) as developed by Bartlett et al.<sup>[1](#bartlett)</sup> The model calculates the amounts of species involved a system over time by solving a system of ordinary differential equations describing the rates of change in species amounts. Scripts in this repo can:
 - Solve for species amounts over time given initial values
 - Calculate target protein degradation (TPD) and ternary complex formation (TCF) relative to baseline target protein amount
 - Model and visualize TPD and TCF with a range of parameter values
@@ -117,3 +118,6 @@ python bin/run_ternary_formation.py
 set PYTHONPATH=%cd%\src\;%PYTHONPATH%
 python bin/run_ternary_formation.py
 ```
+
+### References
+<a name="bartlett">1</a>: https://doi.org/10.1007/s10928-020-09722-z
