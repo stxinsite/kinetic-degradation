@@ -1,9 +1,7 @@
-# Kinetic Modeling of Target Protein Degradation
-This repo implements a kinetic proofreading model of protein degradation motivated by the work of Bartlett et al. (2020).
-This repo implements a kinetic proofreading model of protein degradation via the ubiquitin-proteasome system (UPS) as developed by Bartlett et al.<sup>[1](#bartlett)</sup> The model calculates the amounts of species involved a system over time by solving a system of ordinary differential equations describing the rates of change in species amounts. Scripts in this repo can:
-- Solve for species amounts over time given initial values
-- Calculate target protein degradation (TPD) and ternary complex formation (TCF) relative to baseline target protein amount
-- Model and visualize TPD and TCF with a range of parameter values
+# Introduction
+This repo implements a kinetic proofreading model of protein degradation via the ubiquitin-proteasome system (UPS) motivated by the work of Bartlett et al.<sup>[1](#bartlett)</sup>. Given an initial state of species amounts, this repo can perform the following functions:
+- solve a system of ODEs for the system state over time
+- calculate target protein degradation, ternary complex formation, Dmax (percent maximum degradation)
 
 ## Prerequisites
 Dependencies can be found in `requirements.txt` can be installed with
@@ -12,69 +10,69 @@ pip install -r requirements.txt
 ```
 
 ## Notation
-We maintain a similar notation as used by Bartlett et al. and denote the amounts of species involved in the UPS as follows. For consistency, ensure that all initial values and parameter measurements **are in the same units**. We will use **umol** for amount units:
+We maintain a similar notation as used by Bartlett et al. and denote the amounts of species involved in the UPS as follows. Ensure that all initial values and model parameters **have consistent units**. We will use micromolar for concentration, liter for volume, hour for time.
 
-* BPD_ec: unbound extracellular Bispecific Protein Degrader.
-* BPD_ic: unbound intracellular Bispecific Protein Degrader.
-* T: unbound Target protein.
-* E3: unbound E3 ligase.
-* BPD_T: BPD-T binary complex.
-* BPD_E3: BPD-E3 binary complex.
-* Ternary: T-BPD-E3 ternary complex.
-* Ternary_Ub_i: ternary complex with *i* ubiquitin molecules in poly-ubiquitin chain.
+<details>
+  <summary>Model species notation</summary>
 
-# Run Kinetic Model
-## Provide a config file for a system
-To model a target protein + degrader + E3 ligase system, you must write a config file in YAML or JSON and save it to the `data/` folder.
+  * BPD_ec: extracellular Bispecific Protein Degrader.
+  * BPD_ic: intracellular Bispecific Protein Degrader.
+  * T: unbound Target protein.
+  * T_Ub_n: Target protein with *n* ubiquitin molecules attached.
+  * E3: unbound E3 ligase.
+  * BPD_T: BPD-T binary complex.
+  * BPD_E3: BPD-E3 binary complex.
+  * Ternary: T-BPD-E3 ternary complex.
+  * Ternary_Ub_i: ternary complex with *i* ubiquitin molecules recruited.
+</details>
+
+# Applying the model to a system
+## Providing a system config file
+To model a target protein + degrader + E3 ligase system, you must provide a config file in a format that can be read into a Python dictionary data structure and save it to the `data/` folder.
 
 The config file must contain the following keys (with units in parentheses):
 <details>
-  <summary>Click to expand</summary>
+  <summary>Kinetic rate constants and Binding affinity</summary>
 
-  <blockquote>
-
-  <details>
-    <summary>Kinetic rate parameters</summary>
-
-    ```yaml
-    - alpha: ternary complex cooperativity
-    - Kd_T_binary (uM): equilibrium dissociation constant of BPD-T binary complex
-    - kon_T_binary (1/uM/h): kon of BPD + T -> BPD-T
-    - koff_T_binary (1/h): koff of BPD-T -> BPD + T
-    - Kd_T_ternary (uM): equilibrium dissociation constant of T in ternary complex
-    - kon_T_ternary (1/uM/h): kon of BPD-E3 + T -> T-BPD-E3
-    - koff_T_ternary (1/h): koff of T-BPD-E3 -> BPD-E3 + T
-    - Kd_E3_binary (uM): equilibrium dissociation constant of BPD-E3 binary complex
-    - kon_E3_binary (1/uM/h): kon of BPD + E3 -> BPD-E3
-    - koff_E3_binary (1/h): koff of BPD-E3 -> BPD + E3
-    - Kd_E3_ternary (uM): equilibrium dissociation constant of E3 in ternary complex
-    - kon_E3_ternary (1/uM/h): kon of BPD-T + E3 -> T-BPD-E3
-    - koff_E3_ternary (1/h): koff of T-BPD-E3 -> BPD-T + E3
-    ```
-  </details>
-
-  <details>
-    <summary>Other parameters</summary>
-
-    ```yaml
-    - n: number of ubiquitination steps before degradation
-    - MTT_deg (h): mean transit time of degradation
-    - ktransit_UPS (1/h): transit rate for delay between each ubiquitination step ((n+1) / MTT_deg)
-    - fu_ec: fraction unbound extracellular BPD
-    - fu_ic: fraction unbound intracellular BPD
-    - PS_cell (L/h): permeability-surface area product
-    - kprod_T (umol/h): baseline target protein production rate (Conc_T_base * Vic * kdeg_T)
-    - kdeg_T (1/h): baseline target protein degradation rate
-    - Conc_T_base (uM): baseline target protein concentration
-    - Conc_E3_base (uM): baseline E3 concentration
-    - num_cells: number of cells in system
-    - Vic (L): intracellular volume
-    - Vec (L): extracellular volume
-    ```
-  </details>
-
-  </blockquote>
+  ```yaml
+  - alpha: ternary complex cooperativity
+  - Kd_T_binary (uM): equilibrium dissociation constant of BPD-T binary complex
+  - kon_T_binary (1/uM/h): kon of BPD + T -> BPD-T
+  - koff_T_binary (1/h): koff of BPD-T -> BPD + T
+  - Kd_T_ternary (uM): equilibrium dissociation constant of T in ternary complex
+  - kon_T_ternary (1/uM/h): kon of BPD-E3 + T -> T-BPD-E3
+  - koff_T_ternary (1/h): koff of T-BPD-E3 -> BPD-E3 + T
+  - Kd_E3_binary (uM): equilibrium dissociation constant of BPD-E3 binary complex
+  - kon_E3_binary (1/uM/h): kon of BPD + E3 -> BPD-E3
+  - koff_E3_binary (1/h): koff of BPD-E3 -> BPD + E3
+  - Kd_E3_ternary (uM): equilibrium dissociation constant of E3 in ternary complex
+  - kon_E3_ternary (1/uM/h): kon of BPD-T + E3 -> T-BPD-E3
+  - koff_E3_ternary (1/h): koff of T-BPD-E3 -> BPD-T + E3
+  ```
 </details>
+
+
+
+<details>
+  <summary>Other parameters</summary>
+
+  ```yaml
+  - n: number of ubiquitination steps before degradation
+  - MTT_deg (h): mean transit time of degradation
+  - ktransit_UPS (1/h): transit rate for delay between each ubiquitination step ((n+1) / MTT_deg)
+  - fu_ec: fraction unbound extracellular BPD
+  - fu_ic: fraction unbound intracellular BPD
+  - PS_cell (L/h): permeability-surface area product
+  - kprod_T (umol/h): baseline target protein production rate (Conc_T_base * Vic * kdeg_T)
+  - kdeg_T (1/h): baseline target protein degradation rate
+  - Conc_T_base (uM): baseline target protein concentration
+  - Conc_E3_base (uM): baseline E3 concentration
+  - num_cells: number of cells in system
+  - Vic (L): intracellular volume
+  - Vec (L): extracellular volume
+  ```
+</details>
+
 
 A sufficient number of kinetic rate parameters **must** be defined. The `KineticParameters` class can solve for the rest of the unknown dependent parameters given sufficient information using the ratios `Kd = koff / kon` and `alpha = Kd_binary / Kd_ternary` and test for consistency with these ratios if all parameters are provided.
 
