@@ -73,6 +73,13 @@ def dTargetdt(params, BPD_ic, T, BPD_T, BPD_E3, Ternary, Ternary_Ubs):
            params['kon_T_ternary'] * BPD_E3 * T / params['Vic'] + \
            params['koff_T_ternary'] * (Ternary + np.sum(Ternary_Ubs))
 
+def dTarget_Ub_ndt(params, T_Ub_n, Ternary_Ubs):
+    """
+    Calculates rate of change in fully ubiquitinated Target.
+    """
+    return params['koff_T_ternary'] * Ternary_Ubs[-1] - /
+           params['kdeg_UPS'] * T_Ub_n
+
 def dE3dt(params, BPD_ic, E3, BPD_T, BPD_E3, Ternary, Ternary_Ubs):
     """
     Calculates dE3 / dt.
@@ -110,18 +117,19 @@ def dTernarydt(params, T, E3, BPD_T, BPD_E3, Ternary):
            params['kon_E3_ternary'] * BPD_T * E3 / params['Vic'] - \
            (params['kdeg_T'] + params['koff_T_ternary'] + params['koff_E3_ternary'] + params['ktransit_UPS']) * Ternary
 
-def dTernary_Ubdt(Ternary_Ub_consec_pair, params):
+def dTernary_Ubdt(Ternary_Ub_consec_pair, Ub_idx, params):
     """
     Calculates dTernary_Ub_i / dt.
 
     Args:
-
-    Ternary_Ub_consec_pair: float; an array_like of length 2 containing Ternary_Ub_<i-1> followed by Ternary_Ub_i
-
-    params: dict; contains kinetic parameters
+        Ternary_Ub_consec_pair: array_like; Ternary_Ub_<i-1> followed by Ternary_Ub_i
+        Ub_idx: int; index of Ternary with i ubiquitins
+        params: dict; contains kinetic parameters
     """
     return params['ktransit_UPS'] * Ternary_Ub_consec_pair[0] - \
-           (params['kdeg_T'] + params['koff_T_ternary'] + params['koff_E3_ternary'] + params['ktransit_UPS']) * Ternary_Ub_consec_pair[1]
+           (params['kdeg_T'] + params['koff_T_ternary'] + params['koff_E3_ternary'] +
+            (0 if Ub_idx == params['n'] else params['ktransit_UPS'])
+           ) * Ternary_Ub_consec_pair[1]
 
 def kinetic_rates(params, BPD_ec, BPD_ic, T, E3, BPD_T, BPD_E3, Ternary, *Ternary_Ubs):
     """
@@ -157,7 +165,9 @@ def kinetic_rates(params, BPD_ec, BPD_ic, T, E3, BPD_T, BPD_E3, Ternary, *Ternar
     if params['n'] > 0:  # if there is at least one ubiquitination step
         Ternary_all = np.insert(np.array(Ternary_Ubs), 0, Ternary)  # prepend Ternary to Ternary_Ubs
         Ternary_pairs = np.lib.stride_tricks.sliding_window_view(Ternary_all, 2)  # create array of sliding consecutive pairs
-        Ternary_Ubs_rates = np.apply_along_axis(dTernary_Ubdt, 1, Ternary_pairs, params = params).tolist()  # apply dTernary_Ubdt() to each pair
+        Ub_idx_arr = np.arange(1, params['n'] + 1)
+        # apply dTernary_Ubdt() to each pair
+        Ternary_Ubs_rates = [dTernaryUbdt(Ternary_pair, Ub_idx, params) for Ternary_pair, Ub_idx in zip(Ternary_pairs, Ub_idx_arr)]
     else:
         Ternary_Ubs_rates = []  # else no ubiquitinated Ternary complexes
 
