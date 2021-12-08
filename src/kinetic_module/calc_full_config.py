@@ -1,10 +1,42 @@
+from typing import Literal, Optional
 import numpy as np
 
 class KineticParameters(object):
+    """A class used to check and solve for model parameters.
+
+    This class checks for the consistency of kinetic rate constants and binding
+    affinities and solves for any unknown parameters if given a sufficient
+    number of known parameters.
+
+    ...
+
+    Attributes
+    ----------
+    binding_equilibrium_expr : list[tuple[str, str, str, int]]]
+        expressions relating kinetic rate constants to each other
+    cooperativity_expr : list[tuple[str, str, str, int]]]
+        expressions relating binding affinities and cooperativity to each other
+    expression_list : list[tuple[str, str, str, int]]]
+        a list of tuples (LHS_key, RHS_key1, RHS_key2, power) where
+        LHS_key = RHS_key1 * (RHS_key2 ** power)
+    _params : dict[str, float]
+        kinetic rate constants and model parameters for rate equations
+    warning_messages: set[str]
+        messages for inconsistent parameters
+
+    Methods
+    -------
+    test_and_calc_params(direction)
+        iterate through expression_list and test or solve for parameters
+    forward_pass()
+        iterate forward through expression_list
+    backward_pass()
+        iterate backward through expression_list
+    is_fully_defined()
+        test whether all parameters in expression_list are known and consistent
     """
-    Solve for any dependent kinetic parameters given sufficient independent parameters.
-    """
-    binding_equilibrium_expr = [
+
+    binding_equilibrium_expr: list[tuple[str, str, str, int]] = [
         ('koff_T_binary', 'kon_T_binary', 'Kd_T_binary', 1),
         ('kon_T_binary', 'koff_T_binary', 'Kd_T_binary', -1),
         ('Kd_T_binary', 'koff_T_binary', 'kon_T_binary', -1),
@@ -19,7 +51,7 @@ class KineticParameters(object):
         ('Kd_E3_ternary', 'koff_E3_ternary', 'kon_E3_ternary', -1)
     ]
 
-    cooperativity_expr = [
+    cooperativity_expr: list[tuple[str, str, str, int]] = [
         ('Kd_T_binary', 'Kd_T_ternary', 'alpha', 1),
         ('Kd_T_ternary', 'Kd_T_binary', 'alpha', -1),
         ('alpha', 'Kd_T_binary', 'Kd_T_ternary', -1),
@@ -28,44 +60,73 @@ class KineticParameters(object):
         ('alpha', 'Kd_E3_binary', 'Kd_E3_ternary', -1)
     ]
 
-    expression_list = binding_equilibrium_expr + cooperativity_expr
+    expression_list: list[tuple[str, str, str, int]] = binding_equilibrium_expr + cooperativity_expr
 
-    def __init__(self, params):
-        """params is a kinetic model config dictionary"""
-        self.params = params.copy()
+    def __init__(self, params: dict[str, float]):
+        """
+        Parameters
+        ----------
+        params : dict[str, float]
+            kinetic rate constants and model parameters for rate equations
+        """
+        self._params: dict[str, float] = params.copy()
+        self.warning_messages: set[str] = {}
         self.forward_pass()
         self.backward_pass()
 
-    def test_and_calc_params(self, direction):
-        for LH_Key, RH_Key1, RH_Key2, power in self.expression_list[::direction]:
-            value = self.params[LH_Key]
+    @property
+    def params(self) -> dict[str, float]:
+        return self._params
 
-            if self.params[RH_Key1] and self.params[RH_Key2]:
-                proposed_value = self.params[RH_Key1] * (self.params[RH_Key2] ** power)
+    def test_and_calc_params(self, direction: Literal[1, -1]) -> None:
+        """Checks or calculates parameters.
+
+        Parameters
+        ----------
+        direction: Literal[1, -1]
+            traverse forward (1) or backward (-1) through expression_list
+        """
+
+        for LHS_key, RHS_key1, RHS_key2, power in self.expression_list[::direction]:
+            value: Optional[float] = self.params[LHS_key]
+            proposed_value: Optional[float]
+
+            if self.params[RHS_key1] and self.params[RHS_key2]:
+                # both right-hand side keys have not None values
+                proposed_value = self.params[RHS_key1] * (self.params[RHS_key2] ** power)
             else:
                 proposed_value = None
 
             if proposed_value is not None:
                 if value is not None:
-                    # if key already has value, check consistency with proposed value
-                    assert np.isclose(value, proposed_value, rtol = 0.05), (
-                        f"{LH_Key} = {value} is not consistent with {RH_Key1} {'*' if power == 1 else '/'} {RH_Key2} = {proposed_value}"
-                    )
+                    # if left-hand side key already has value, check consistency with proposed value
+                    if not np.isclose(value, proposed_value, rtol = 0.05):
+                        self.warning_messages.add(
+                            f"{LHS_key} = {value} is not consistent with {RHS_key1} {'*' if power == 1 else '/'} {RHS_key2} = {proposed_value}"
+                        )
                 else:
-                    # if value is nan, update with proposed value
-                    self.params[LH_Key] = proposed_value
+                    # if left-hand side value is None, update with proposed value
+                    self.params[LHS_key] = proposed_value
 
-    def forward_pass(self):
-        self.test_and_calc_params(1)
+    def forward_pass(self) -> None:
+        """Checks or calculates parameters in forward direction.
+        """
+        self.test_and_calc_params(direction=1)
 
-    def backward_pass(self):
-        self.test_and_calc_params(-1)
+    def backward_pass(self) -> None:
+        """Checks or calculates parameters in backward direction.
+        """
+        self.test_and_calc_params(direction=-1)
 
-    def is_fully_defined(self):
-        for LH_Key, RH_Key1, RH_Key2, power in self.binding_equilibrium_expr:
-            if self.params[LH_Key] is None:
-                return False
+    def is_fully_defined(self) -> bool:
+        """Checks whether all parameters are known and consistent.
+        """
+        if len(self.warning_messages):
+            print(self.warning_messages)
+            return False
+        else:
+            for LHS_key, RHS_key1, RHS_key2, power in self.expression_list:
+                if self.params[LHS_key] is None:
+                    return False
+                    
         return True
-
-    def get_dict(self):
-        return self.params
