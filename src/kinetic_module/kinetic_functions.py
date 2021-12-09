@@ -5,11 +5,11 @@ degradation.
 
 from typing import Any
 import numpy as np
+from numpy.typing import NDArray
 import pandas as pd
 import scipy.integrate as integrate
 from scipy.optimize import root
 from matplotlib import pyplot as plt
-from nptyping import NDArray
 
 """
 Abbreviations signify as follows:
@@ -58,6 +58,8 @@ Vec: extracellular volume
 """
 KINETIC RATES
 """
+
+
 def dBPD_ecdt(BPD_ec: float,
               BPD_ic: float,
               params: dict[str, float]) -> float:
@@ -83,13 +85,14 @@ def dBPD_ecdt(BPD_ec: float,
         - params['PS_cell'] * params['num_cells'] * ((params['fu_ec'] * BPD_ec / params['Vec']) - (params['fu_ic'] * BPD_ic / params['Vic']))
         )
 
+
 def dBPD_icdt(BPD_ec: float,
               BPD_ic: float,
               T: float,
-              T_Ubs: NDArray[(Any,), float],
+              T_Ubs: NDArray[np.float64],
               E3: float,
               BPD_T: float,
-              BPD_T_Ubs: NDArray[(Any,), float],
+              BPD_T_Ubs: NDArray[np.float64],
               BPD_E3: float,
               params: dict[str, float]) -> float:
     """Calculates dBPD_ic / dt.
@@ -105,7 +108,7 @@ def dBPD_icdt(BPD_ec: float,
     T : float
         amount of Target
 
-    T_Ubs : NDArray[(Any,), float]
+    T_Ubs : NDArray[np.float64]
         amounts of ubiquitinated Targets
 
     E3 : float
@@ -114,7 +117,7 @@ def dBPD_icdt(BPD_ec: float,
     BPD_T : float
         amount of BPD_T
 
-    BPD_T_Ubs : NDArray[(Any,), float]
+    BPD_T_Ubs : NDArray[np.float64]
         amounts of ubiquitinated BPD_T's
 
     BPD_E3 : float
@@ -137,9 +140,10 @@ def dBPD_icdt(BPD_ec: float,
         + params['kdeg_UPS'] * (0 if len(BPD_T_Ubs) == 0 else BPD_T_Ubs[-1])
         )
 
+
 def dTargetdt(BPD_ic: float,
               T: float,
-              T_Ubs: NDArray[(Any,), float],
+              T_Ubs: NDArray[np.float64],
               BPD_T: float,
               BPD_E3: float,
               Ternary: float,
@@ -154,7 +158,7 @@ def dTargetdt(BPD_ic: float,
     T : float
         amount of Target
 
-    T_Ubs : NDArray[(Any,), float]
+    T_Ubs : NDArray[np.float64]
         amounts of ubiquitinated Targets
 
     BPD_T : float
@@ -183,13 +187,14 @@ def dTargetdt(BPD_ic: float,
         + params['kde_ub'] * (0 if len(T_Ubs) == 0 else T_Ubs[0])
         )
 
+
 def dE3dt(BPD_ic: float,
           E3: float,
           BPD_T: float,
-          BPD_T_Ubs: NDArray[(Any,), float],
+          BPD_T_Ubs: NDArray[np.float64],
           BPD_E3: float,
           Ternary: float,
-          Ternary_Ubs: NDArray[(Any,), float],
+          Ternary_Ubs: NDArray[np.float64],
           params: dict[str, float]) -> float:
     """Calculates dE3 / dt.
 
@@ -204,7 +209,7 @@ def dE3dt(BPD_ic: float,
     BPD_T : float
         amount of BPD_T
 
-    BPD_T_Ubs : NDArray[(Any,), float]
+    BPD_T_Ubs : NDArray[np.float64]
         amounts of ubiquitinated BPD_T's
 
     BPD_E3 : float
@@ -213,7 +218,7 @@ def dE3dt(BPD_ic: float,
     Ternary : float
         amount of Ternary
 
-    Ternary_Ubs : NDArray[(Any,), float]
+    Ternary_Ubs : NDArray[np.float64]
         amounts of ubiquitinated Ternaries
 
     params : dict[str, float]
@@ -231,11 +236,12 @@ def dE3dt(BPD_ic: float,
         + params['koff_E3_ternary'] * (Ternary + np.sum(Ternary_Ubs))
         )
 
+
 def dBPD_Tdt(BPD_ic: float,
              T: float,
              E3: float,
              BPD_T: float,
-             BPD_T_Ubs: NDArray[(Any,), float],
+             BPD_T_Ubs: NDArray[np.float64],
              Ternary: float,
              params: dict[str, float]) -> float:
     """Calculates dBPD.T / dt.
@@ -254,7 +260,7 @@ def dBPD_Tdt(BPD_ic: float,
     BPD_T : float
         amount of BPD_T
 
-    BPD_T_Ubs : NDArray[(Any,), float]
+    BPD_T_Ubs : NDArray[np.float64]
         amounts of ubiquitinated BPD_T's
 
     Ternary : float
@@ -277,13 +283,14 @@ def dBPD_Tdt(BPD_ic: float,
         + params['kde_ub'] * (0 if len(BPD_T_Ubs) == 0 else BPD_T_Ubs[0])
         )
 
+
 def dBPD_E3dt(BPD_ic: float,
               T: float,
-              T_Ubs: NDArray[(Any,), float],
+              T_Ubs: NDArray[np.float64],
               E3: float,
               BPD_E3: float,
               Ternary: float,
-              Ternary_Ubs: NDArray[(Any,), float],
+              Ternary_Ubs: NDArray[np.float64],
               params: dict[str, float]) -> float:
     """Calculates dBPD.E3 / dt.
 
@@ -293,7 +300,7 @@ def dBPD_E3dt(BPD_ic: float,
     T : float
         amount of Target
 
-    T_Ubs : NDArray[(Any,), float]
+    T_Ubs : NDArray[np.float64]
         amounts of ubiquitinated Targets
 
     E3 : float
@@ -305,7 +312,7 @@ def dBPD_E3dt(BPD_ic: float,
     Ternary : float
         amount of Ternary
 
-    Ternary_Ubs : NDArray[(Any,), float]
+    Ternary_Ubs : NDArray[np.float64]
         amounts of ubiquitinated Ternaries
 
     params : dict[str, float]
@@ -323,6 +330,7 @@ def dBPD_E3dt(BPD_ic: float,
         + (params['koff_T_ternary'] + params['kdeg_T']) * (Ternary + np.sum(Ternary_Ubs))
         + params['kdeg_UPS'] * (0 if len(Ternary_Ubs) == 0 else Ternary_Ubs[-1])
         )
+
 
 def dTernarydt(T: float,
                E3: float,
@@ -364,7 +372,7 @@ def dTernarydt(T: float,
         - (params['kdeg_T'] + params['koff_T_ternary'] + params['koff_E3_ternary'] + params['kub']) * Ternary
         )
 
-def dT_Ubdt(T_Ub_consec_pair: NDArray[(2,), float],
+def dT_Ubdt(T_Ub_consec_pair: NDArray[np.float64],
             BPD_ic: float,
             BPD_T_Ub_i: float,
             BPD_E3: float,
@@ -375,7 +383,7 @@ def dT_Ubdt(T_Ub_consec_pair: NDArray[(2,), float],
 
     Parameters
     ----------
-    T_Ub_consec_pair : NDArray[(2,), float]
+    T_Ub_consec_pair : NDArray[np.float64]
         amounts of T.Ub.i, T.Ub.<i+1> or T.Ub.n, 0
 
     BPD_ic : float
@@ -411,7 +419,8 @@ def dT_Ubdt(T_Ub_consec_pair: NDArray[(2,), float],
         - params['kdeg_UPS'] * (T_Ub_consec_pair[0] if i == params['n'] else 0)
         )
 
-def dBPD_T_Ubdt(BPD_T_Ub_consec_pair: NDArray[(Any,), float],
+
+def dBPD_T_Ubdt(BPD_T_Ub_consec_pair: NDArray[np.float64],
                 BPD_ic: float,
                 T_Ub_i: float,
                 E3: float,
@@ -422,7 +431,7 @@ def dBPD_T_Ubdt(BPD_T_Ub_consec_pair: NDArray[(Any,), float],
 
     Parameters
     ----------
-    BPD_T_Ub_consec_pair : NDArray[(2,), float]
+    BPD_T_Ub_consec_pair : NDArray[np.float64]
         amounts of BPD.T.Ub.i, BPD.T.Ub.<i+1> or BPD.T.Ub.n, 0
 
     BPD_ic : float
@@ -430,9 +439,6 @@ def dBPD_T_Ubdt(BPD_T_Ub_consec_pair: NDArray[(Any,), float],
 
     T_Ub_i : float
         amounts of T.Ub.i
-
-    BPD_E3 : float
-        amount of BPD_E3
 
     Ternary_Ub_i : float
         amount of Ternary.Ub.i
@@ -458,7 +464,8 @@ def dBPD_T_Ubdt(BPD_T_Ub_consec_pair: NDArray[(Any,), float],
         - params['kdeg_UPS'] * (BPD_T_Ub_consec_pair[0] if i == params['n'] else 0)
         )
 
-def dTernary_Ubdt(Ternary_Ub_consec_pair: NDArray[(Any,), float],
+
+def dTernary_Ubdt(Ternary_Ub_consec_pair: NDArray[np.float64],
                   T_Ub_i: float,
                   E3: float,
                   BPD_T_Ub_i: float,
@@ -469,7 +476,7 @@ def dTernary_Ubdt(Ternary_Ub_consec_pair: NDArray[(Any,), float],
 
     Parameters
     ----------
-    Ternary_Ub_consec_pair : NDArray[(2,), float]
+    Ternary_Ub_consec_pair : NDArray[np.float64]
         amounts of Ternary.Ub.<i-1>, Ternary.Ub.i or Ternary, Ternary.Ub.1
 
     T_Ub_i : float
@@ -503,12 +510,13 @@ def dTernary_Ubdt(Ternary_Ub_consec_pair: NDArray[(Any,), float],
         - params['kdeg_UPS'] * (Ternary_Ub_consec_pair[1] if i == params['n'] else 0)
         )
 
-def kinetic_rates(y: NDArray[(Any,), float], params: dict[str, float]) -> NDArray[(Any,), float]:
+
+def kinetic_rates(y: NDArray[np.float64], params: dict[str, float]) -> NDArray[np.float64]:
     """Calculates rates of change for species in PROTAC-induced target protein degradation.
 
     Parameters
     ----------
-    y : NDArray[(Any,), float]
+    y : NDArray[np.float64]
         amounts of species in this order:
             BPD_ec, BPD_ic, T, E3, BPD_T, BPD_E3, Ternary,
             T_Ub_1, ..., T_Ub_n, BPD_T_Ub_1, ..., BPD_T_Ub_n, Ternary_Ub_1, ..., Ternary_Ub_n
@@ -518,7 +526,7 @@ def kinetic_rates(y: NDArray[(Any,), float], params: dict[str, float]) -> NDArra
 
     Returns
     -------
-    NDArray[(Any,), float]
+    NDArray[np.float64]
         rates of change with respect to time
     """
     # unpack the first 7 species
@@ -564,7 +572,8 @@ def kinetic_rates(y: NDArray[(Any,), float], params: dict[str, float]) -> NDArra
 
     return all_rates
 
-def jac_kinetic_rates(y: NDArray[(Any,), float], params: dict[str, float]) -> NDArray[(Any, Any,), float]:
+
+def jac_kinetic_rates(y: NDArray[np.float64], params: dict[str, float]) -> NDArray[np.float64]:
     """Calculates Jacobian of system of rate equations.
 
     Calculates M x M Jacobian J of M rate equations with respect to M species
@@ -574,7 +583,7 @@ def jac_kinetic_rates(y: NDArray[(Any,), float], params: dict[str, float]) -> ND
 
     Parameters
     ----------
-    y : NDArray[(Any,), float]
+    y : NDArray[np.float64]
         amounts of species in this order:
             BPD_ec, BPD_ic, T, E3, BPD_T, BPD_E3, Ternary,
             T_Ub_1, ..., T_Ub_n, BPD_T_Ub_1, ..., BPD_T_Ub_n, Ternary_Ub_1, ..., Ternary_Ub_n
@@ -584,7 +593,7 @@ def jac_kinetic_rates(y: NDArray[(Any,), float], params: dict[str, float]) -> ND
 
     Returns
     -------
-    NDArray[(Any, Any,), float]
+    NDArray[np.float64]
         Jacobian matrix of system of rate equations
     """
     # unpack the first 7 species
@@ -748,12 +757,14 @@ def jac_kinetic_rates(y: NDArray[(Any,), float], params: dict[str, float]) -> ND
 
     return all_jacs
 
+
 """
 SOLVE SYSTEM OF ODES
 """
+
+
 def initial_values(params, BPD_ec=0, BPD_ic=0):
-    """
-    Return array of initial values for species amounts.
+    """Returns array of initial values for species amounts.
 
     Args:
         params: dict; model parameters.
@@ -830,7 +841,7 @@ def calc_concentrations(t_eval, y0, params, max_step=np.inf, T_total_baseline=No
 
     return result
 
-def solve_steady_state(initial_guess, params):
+def solve_steady_state(initial_guess, params: dict[str, float]):
     """
     Solve system steady state, the amounts of species for which all kinetic rates
     equal 0.
@@ -889,14 +900,16 @@ def calc_t_half(t_eval, y0, params):
     Find time t at which total amount of Target reaches halfway between baseline and
     steady state.
     """
-    result = calc_concentrations(params, times, y0, max_step = 0.001)
+    result = calc_concentrations(t_eval=t_eval, y0=y0, params=params, max_step = 0.001)
     init_guess = result.y[:,-1]  # system state at the last time point
-    steady_state = solve_steady_state(init_guess, params)
+    steady_state = solve_steady_state(initial_guess=init_guess, params=params)
     T_total_steady_state = np.sum(np.concatenate((steady_state[[2,4]], steady_state[6:])))
     T_total_baseline = np.sum(np.concatenate((y0[[2,4]], y0[6:])))
 
-    result_with_events = calc_concentrations(params, times, y0, max_step = 0.001,
-        T_total_baseline = T_total_baseline, T_total_steady_state = T_total_steady_state)
+    result_with_events = calc_concentrations(
+        t_eval=t_eval, y0=y0, params=params, max_step = 0.001,
+        T_total_baseline=T_total_baseline, T_total_steady_state=T_total_steady_state
+    )
 
     t_half = result_with_events.t_events[0][0]  # first event type, first time point
     return t_half
@@ -947,12 +960,14 @@ def calc_degradation_curve(t_eval, params, initial_BPD_ec_conc=0, initial_BPD_ic
         Dmax = calc_Dmax(t_eval, y0, params, initial_guess=concentrations.y[:,-1]) * 100  # float: percent Dmax
 
         result = pd.DataFrame({
-            't': t_eval,
+            'initial_BPD_ec_conc': initial_BPD_ec_conc,
+            'initial_BPD_ic_conc': initial_BPD_ic_conc,
             'degradation': relative_T,
             'Ternary': relative_Ternary,
             'all_Ternary': relative_all_Ternary,
             'Dmax': Dmax
         })
+        result.insert(0, 't', pd.Series(t_eval))
 
         if return_only_final_state:
             return result.iloc[-1:]  # only return system at last time point
@@ -1015,11 +1030,17 @@ def plot_concentrations(df):
 """
 UNIT TESTING
 """
+
+
 def test_total_species(df, regex):
     totals = df.filter(regex=regex).sum(axis=1)  # pd.Series: total amounts at time points
     baseline = totals.iloc[0]
-    print(totals)
-    return np.allclose(totals, baseline)
+    is_success = np.allclose(totals, baseline)
+    if not is_success:
+        print(totals)
+
+    return is_success
+
 
 def test_total_BPD(df):
     """
@@ -1027,11 +1048,17 @@ def test_total_BPD(df):
     """
     return test_total_species(df, regex='.*BPD.*')
 
+
 def test_total_E3(df):
     """
     Total E3 amount should remain constant over time.
     """
     return test_total_species(df, regex='.*E3.*')
+
+
+def test_all_nonnegative(df):
+    pass
+
 
 def run_unit_tests(df):
     all_tests_passed = True
@@ -1044,6 +1071,7 @@ def run_unit_tests(df):
 
     if all_tests_passed:
         print("All unit tests passed.")
+
 
 def test_degradation_rate():
     """

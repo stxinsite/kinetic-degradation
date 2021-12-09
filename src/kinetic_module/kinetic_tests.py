@@ -1,12 +1,18 @@
+"""
+This module contains functions used to calculate target protein degradation, ternary complex formation, and Dmax for
+various configurations of model parameters and initial values.
+"""
+
+from typing import Iterable, Optional
+import yaml
 import numpy as np
+from numpy.typing import ArrayLike
 import pandas as pd
-import multiprocessing as mp
 import matplotlib.pyplot as plt
-import matplotlib.colors
-from matplotlib.ticker import FuncFormatter
-from mpl_toolkits import mplot3d
-from tqdm import tqdm
+from multiprocessing import Pool, cpu_count
+# from ray.util.multiprocessing import Pool
 import kinetic_module.kinetic_functions as kf
+from kinetic_module.calc_full_config import KineticParameters
 plt.rcParams["axes.labelsize"] = 20
 plt.rcParams["axes.titlesize"] = 20
 plt.rcParams["figure.figsize"] = (12,8)
@@ -27,32 +33,50 @@ To do:
     - to plot surface plot
 """
 
-def solve_target_degradation(t_eval, params, initial_BPD_ec_concs=[], initial_BPD_ic_concs=[], return_only_final_state=True, PROTAC_ID=None):
-    """
-    Calculate target protein degradation and ternary formation
-    for various initial degrader concentrations at time points t_eval.
 
-    Arguments:
-        t_eval: array_like; time points at which to store computed solution.
-        params: dict; kinetic rate constants and model parameters for rate equations.
-        initial_BPD_ec_concs: array_like; initial value of BPD_ec concentration.
-        initial_BPD_ic_concs: array_like; initial value of BPD_ic concentration.
-        return_only_final_state: bool; whether to return only final state of system.
-        PROTAC_ID: str; PROTAC identifier
+def solve_target_degradation(t_eval: ArrayLike,
+                             params: dict[str, float],
+                             initial_BPD_ec_concs: Optional[Iterable] = None,
+                             initial_BPD_ic_concs: Optional[Iterable] = None,
+                             return_only_final_state: bool = False,
+                             PROTAC_ID: Optional[str] = None) -> pd.DataFrame:
+    """Calculates target protein degradation, ternary complex formation, and Dmax
+    for possible various initial concentrations of degrader over a range of time points.
 
-    Returns:
-        pd.DataFrame; percent degradation and ternary formation relative to baseline Target
-            at time points t_eval for all initial degrader concentrations.
+    Parameters
+    ----------
+    t_eval : ArrayLike
+        time points at which to store computed solution
+
+    params : dict[str, float]
+        kinetic rate constants and model parameters for rate equations
+
+    initial_BPD_ec_concs : Optional[Iterable]
+        initial value(s) of BPD_ec concentration
+
+    initial_BPD_ic_concs : Optional[Iterable]
+        initial value(s) of BPD_ic concentration
+
+    return_only_final_state : bool
+        whether to return only final state of system
+
+    PROTAC_ID : Optional[str]
+        PROTAC identifier
+
+    Returns
+    -------
+    pd.DataFrame
+        percent degradation, ternary formation relative to baseline total Target amount and
+        percent Dmax for all initial concentrations of degrader over a range of time points
     """
-    assert pd.api.types.is_list_like(initial_BPD_ec_concs) and pd.api.types.is_list_like(initial_BPD_ic_concs)
-    if initial_BPD_ec_concs and not initial_BPD_ic_concs:
-        # initial_BPD_ec_concs is provided but initial_BPD_ic_concs is empty
-        initial_BPD_ic_concs = [0] * len(initial_BPD_ec_concs)
-    elif not initial_BPD_ec_concs and initial_BPD_ic_concs:
-        # initial_BPD_ic_concs is provided but initial_BPD_ec_concs is empty
-        initial_BPD_ec_concs = [0] * len(initial_BPD_ic_concs)
+    if initial_BPD_ec_concs is None and initial_BPD_ic_concs is None:
+        print('No initial concentrations of degrader were provided.')
+        return None
+    elif initial_BPD_ec_concs is not None and initial_BPD_ic_concs is None:
+        initial_BPD_ic_concs = np.zeros(len(initial_BPD_ec_concs))
+    elif initial_BPD_ec_concs is None and initial_BPD_ic_concs is not None:
+        initial_BPD_ec_concs = np.zeros(len(initial_BPD_ic_concs))
     else:
-        # both or neither are provided
         assert len(initial_BPD_ec_concs) == len(initial_BPD_ic_concs)
 
     inputs = [
@@ -60,18 +84,57 @@ def solve_target_degradation(t_eval, params, initial_BPD_ec_concs=[], initial_BP
         for (initial_BPD_ec, initial_BPD_ic) in zip(initial_BPD_ec_concs, initial_BPD_ic_concs)
     ]
 
-    if len(initial_BPD_ec_concs) > 1:
-        pool = mp.Pool(processes=mp.cpu_count())
+    if len(inputs) > 1:
+        pool = Pool(processes=cpu_count())
         outputs = pool.starmap(kf.calc_degradation_curve, inputs)
         pool.close()
         pool.join()
     else:
-        outputs = [kf.calc_degradation_curve(*args) for args in inputs]
+        args = inputs[0]
+        outputs = [kf.calc_degradation_curve(*args)]
 
     result = pd.concat(outputs, ignore_index=True)
     result['PROTAC'] = PROTAC_ID
     return result
 
+
+def run_kinetic_model(config_files: list[str],
+                      protac_IDs: list[str],
+                      t_eval: ArrayLike = np.linspace(0, 1),
+                      initial_BPD_ic_concs: Optional[Iterable] = None,
+                      initial_BPD_ec_concs: Optional[Iterable] = None,
+                      return_only_final_state: bool = False) -> pd.DataFrame:
+    outputs = []
+    for config, protac in zip(config_files, protac_IDs):
+        params = get_params_from_config(config)
+
+        df = solve_target_degradation(
+            t_eval=t_eval,
+            params=params,
+            initial_BPD_ec_concs=initial_BPD_ec_concs,
+            initial_BPD_ic_concs=initial_BPD_ic_concs,
+            return_only_final_state=return_only_final_state,
+            PROTAC_ID=protac
+        )
+
+        outputs.append(df)
+
+    result = pd.concat(outputs, ignore_index=True)
+    return result
+
+
+def get_params_from_config(config_filename: str) -> dict[str, float]:
+    # this will probably break if cwd is not kinetic-degradation
+    with open(file=f'./data/{config_filename}', mode='r') as file:
+        config_dict = yaml.safe_load(file)
+
+    params = KineticParameters(config_dict)
+    if params.is_fully_defined():
+        result = params.params
+    else:
+        raise ValueError(f'Parameters in {config_filename} are insufficient or inconsistent.')
+
+    return result
 
 """
 DO NOT USE YET. WILL NOT WORK.
