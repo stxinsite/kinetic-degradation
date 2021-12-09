@@ -1,0 +1,28 @@
+alpha: 3.2
+Kd_T_binary: 8.54
+kon_T_binary: 3.6e+4
+koff_T_binary: 3.07e+5
+Kd_T_ternary: 2.66
+kon_T_ternary: 1026.0
+koff_T_ternary: 2721.6
+Kd_E3_binary: 1.23e-2
+kon_E3_binary: 8929.0
+koff_E3_binary: 109.8
+Kd_E3_ternary: 3.84e-3
+kon_E3_ternary: 1026.0
+koff_E3_ternary: 3.94
+n: 4
+kub: 500
+kde_ub: 250
+kdeg_UPS: 500
+MTT_deg: 0.017
+fu_ec: 1
+fu_ic: 1
+PS_cell: 0 # 1.24e-12
+kprod_T: 0 # 4.0e-16
+kdeg_T: 0 # 0.1
+Conc_T_base: 0.001
+Conc_E3_base: 0.1
+num_cells: 5.0e+3
+Vic: 4.0e-12
+Vec: 2.0e-4
