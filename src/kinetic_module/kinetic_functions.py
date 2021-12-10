@@ -137,7 +137,7 @@ def dBPD_icdt(BPD_ec: float,
         + (params['koff_T_binary'] + params['kdeg_T']) * (BPD_T + np.sum(BPD_T_Ubs))
         - params['kon_E3_binary'] * params['fu_ic'] * BPD_ic * E3 / params['Vic']
         + params['koff_E3_binary'] * BPD_E3
-        + params['kdeg_UPS'] * (0 if len(BPD_T_Ubs) == 0 else BPD_T_Ubs[-1])
+        + params['kdeg_UPS'] * (BPD_T_Ubs[-1] if len(BPD_T_Ubs) else 0)
         )
 
 
@@ -184,7 +184,7 @@ def dTargetdt(BPD_ic: float,
         + params['koff_T_binary'] * BPD_T
         - params['kon_T_ternary'] * BPD_E3 * T / params['Vic']
         + params['koff_T_ternary'] * Ternary
-        + params['kde_ub'] * (0 if len(T_Ubs) == 0 else T_Ubs[0])
+        + params['kde_ub'] * (T_Ubs[0] if len(T_Ubs) else 0)
         )
 
 
@@ -276,11 +276,10 @@ def dBPD_Tdt(BPD_ic: float,
     """
     return (
         params['kon_T_binary'] * params['fu_ic'] * BPD_ic * T / params['Vic']
-        - params['koff_T_binary'] * BPD_T
+        - (params['koff_T_binary'] + params['kdeg_T']) * BPD_T
         - params['kon_E3_ternary'] * BPD_T * E3 / params['Vic']
         + params['koff_E3_ternary'] * Ternary
-        - params['kdeg_T'] * BPD_T
-        + params['kde_ub'] * (0 if len(BPD_T_Ubs) == 0 else BPD_T_Ubs[0])
+        + params['kde_ub'] * (BPD_T_Ubs[0] if len(BPD_T_Ubs) else 0)
         )
 
 
@@ -328,7 +327,7 @@ def dBPD_E3dt(BPD_ic: float,
         - params['koff_E3_binary'] * BPD_E3
         - params['kon_T_ternary'] * BPD_E3 * (T + np.sum(T_Ubs)) / params['Vic']
         + (params['koff_T_ternary'] + params['kdeg_T']) * (Ternary + np.sum(Ternary_Ubs))
-        + params['kdeg_UPS'] * (0 if len(Ternary_Ubs) == 0 else Ternary_Ubs[-1])
+        + params['kdeg_Ternary'] * (Ternary_Ubs[-1] if len(Ternary_Ubs) else 0)
         )
 
 
@@ -506,8 +505,9 @@ def dTernary_Ubdt(Ternary_Ub_consec_pair: NDArray[np.float64],
         params['kub'] * Ternary_Ub_consec_pair[0]
         + params['kon_T_ternary'] * BPD_E3 * T_Ub_i / params['Vic']
         + params['kon_E3_ternary'] * BPD_T_Ub_i * E3 / params['Vic']
-        - (params['kdeg_T'] + params['koff_T_ternary'] + params['koff_E3_ternary'] + params['kub']) * Ternary_Ub_consec_pair[1]
-        - params['kdeg_UPS'] * (Ternary_Ub_consec_pair[1] if i == params['n'] else 0)
+        - (params['kdeg_T'] + params['koff_T_ternary'] + params['koff_E3_ternary']) * Ternary_Ub_consec_pair[1]
+        - params['kub'] * (0 if i == params['n'] else Ternary_Ub_consec_pair[1])
+        - params['kdeg_Ternary'] * (Ternary_Ub_consec_pair[1] if i == params['n'] else 0)
         )
 
 
@@ -542,9 +542,9 @@ def kinetic_rates(y: NDArray[np.float64], params: dict[str, float]) -> NDArray[n
     BPD_T_rate = dBPD_Tdt(BPD_ic, T, E3, BPD_T, BPD_T_Ubs, Ternary, params)
     BPD_E3_rate = dBPD_E3dt(BPD_ic, T, T_Ubs, E3, BPD_E3, Ternary, Ternary_Ubs, params)
     Ternary_rate = dTernarydt(T, E3, BPD_T, BPD_E3, Ternary, params)
-    T_Ubs_rates = []
-    BPD_T_Ubs_rates = []
-    Ternary_Ubs_rates = []
+    T_Ubs_rates: list[float] = []
+    BPD_T_Ubs_rates: list[float] = []
+    Ternary_Ubs_rates: list[float] = []
 
     if params['n'] > 0:
         # there is at least one ubiquitination step
@@ -558,13 +558,18 @@ def kinetic_rates(y: NDArray[np.float64], params: dict[str, float]) -> NDArray[n
         Ternary_pairs = np.lib.stride_tricks.sliding_window_view(Ternary_all, window_shape=2)
 
         for i in range(params['n']):
-            T_Ubs_rates.append(dT_Ubdt(T_pairs[i], BPD_ic, BPD_T_Ubs[i], BPD_E3, Ternary_Ubs[i], i + 1, params))
-            BPD_T_Ubs_rates.append(dBPD_T_Ubdt(BPD_T_pairs[i], BPD_ic, T_Ubs[i], E3, Ternary_Ubs[i], i + 1, params))
-            Ternary_Ubs_rates.append(dTernary_Ubdt(Ternary_pairs[i], T_Ubs[i], E3, BPD_T_Ubs[i], BPD_E3, i + 1, params))
+            dT_Ub_idt = dT_Ubdt(T_pairs[i], BPD_ic, BPD_T_Ubs[i], BPD_E3, Ternary_Ubs[i], i + 1, params)
+            T_Ubs_rates.append(dT_Ub_idt)
+
+            dBPD_T_Ub_idt = dBPD_T_Ubdt(BPD_T_pairs[i], BPD_ic, T_Ubs[i], E3, Ternary_Ubs[i], i + 1, params)
+            BPD_T_Ubs_rates.append(dBPD_T_Ub_idt)
+
+            dTernary_Ub_idt = dTernary_Ubdt(Ternary_pairs[i], T_Ubs[i], E3, BPD_T_Ubs[i], BPD_E3, i + 1, params)
+            Ternary_Ubs_rates.append(dTernary_Ub_idt)
 
     # list concatenation
     all_rates = np.array(
-        [ BPD_ec_rate, BPD_ic_rate, T_rate, E3_rate, BPD_T_rate, BPD_E3_rate, Ternary_rate ]
+        [BPD_ec_rate, BPD_ic_rate, T_rate, E3_rate, BPD_T_rate, BPD_E3_rate, Ternary_rate]
         + T_Ubs_rates
         + BPD_T_Ubs_rates
         + Ternary_Ubs_rates
@@ -602,55 +607,68 @@ def jac_kinetic_rates(y: NDArray[np.float64], params: dict[str, float]) -> NDArr
     Ub_species = np.array_split(y[7:], 3)
     T_Ubs, BPD_T_Ubs, Ternary_Ubs = Ub_species[0], Ub_species[1], Ub_species[2]
 
+    n_Ub_species = len(y[7:])
+    n_T_Ubs = len(T_Ubs)
+    n_BPD_T_Ubs = len(BPD_T_Ubs)
+    n_Ternary_Ubs = len(Ternary_Ubs)
+
     dBPD_ecdtdy = (
         [
-            -params['PS_cell'] * params['num_cells'] * params['fu_ec'] / params['Vec'],
+            - params['PS_cell'] * params['num_cells'] * params['fu_ec'] / params['Vec'],
             params['PS_cell'] * params['num_cells'] * params['fu_ic'] / params['Vic']
-        ] +
-        [0] * (5 + 3 * params['n'])  # dBPD_ec/dt doesn't depend on T, E3, BPD_T, BPD_E3, Ternary, T_Ubs, BPD_T_Ubs, Ternary_Ubs
+        ]
+        + [0] * (5 + n_Ub_species)  # dBPD_ec/dt doesn't depend on T, E3, BPD_T, BPD_E3, Ternary, T_Ubs, BPD_T_Ubs, Ternary_Ubs
     )
 
     dBPD_icdtdy = (
         [
             params['PS_cell'] * params['fu_ec'] / params['Vec'],
-            -params['PS_cell'] * params['fu_ic'] / params['Vic'] - params['kon_T_binary'] * params['fu_ic'] * (T + np.sum(T_Ubs)) / params['Vic'] - params['kon_E3_binary'] * params['fu_ic'] * E3 / params['Vic'],
-            -params['kon_T_binary'] * params['fu_ic'] * BPD_ic / params['Vic'],
-            -params['kon_E3_binary'] * params['fu_ic'] * BPD_ic / params['Vic'],
+            - params['PS_cell'] * params['fu_ic'] / params['Vic']
+            - params['kon_T_binary'] * params['fu_ic'] * (T + np.sum(T_Ubs)) / params['Vic']
+            - params['kon_E3_binary'] * params['fu_ic'] * E3 / params['Vic'],
+            - params['kon_T_binary'] * params['fu_ic'] * BPD_ic / params['Vic'],
+            - params['kon_E3_binary'] * params['fu_ic'] * BPD_ic / params['Vic'],
             params['koff_T_binary'] + params['kdeg_T'],
             params['koff_E3_binary'],
             0
-        ] +
-        ([-params['kon_T_binary'] * params['fu_ic'] * BPD_ic / params['Vic']] * params['n']) +
-        ([params['koff_T_binary'] + params['kdeg_T']] * params['n']) +
-        ([0] * params['n'])  # dBPD_ic/dt does not depend on Ternary_Ubs
+        ]
+        + [- params['kon_T_binary'] * params['fu_ic'] * BPD_ic / params['Vic']] * n_T_Ubs
+        + [params['koff_T_binary'] + params['kdeg_T']] * (n_BPD_T_Ubs - 1)
+        + [params['koff_T_binary'] + params['kdeg_T'] + params['kdeg_UPS']] * (1 if n_BPD_T_Ubs else 0)
+        + [0] * n_Ternary_Ubs  # dBPD_ic/dt does not depend on Ternary_Ubs
     )
 
     dTargetdtdy = (
         [
             0,
-            -params['kon_T_binary'] * params['fu_ic'] * T / params['Vic'],
-            -params['kdeg_T'] - params['kon_T_binary'] * params['fu_ic'] * BPD_ic / params['Vic'] - params['kon_T_ternary'] * BPD_E3 / params['Vic'],
+            - params['kon_T_binary'] * params['fu_ic'] * T / params['Vic'],
+            - params['kdeg_T']
+            - params['kon_T_binary'] * params['fu_ic'] * BPD_ic / params['Vic']
+            - params['kon_T_ternary'] * BPD_E3 / params['Vic'],
             0,
             params['koff_T_binary'],
-            -params['kon_T_ternary'] * T / params['Vic'],
+            - params['kon_T_ternary'] * T / params['Vic'],
             params['koff_T_ternary']
-        ] +
-        ([params['kde_ub']] * (0 if params['n'] == 0 else 1)) + ([0] * (params['n'] - 1)) +
-        ([0] * (2 * params['n']))
+        ]
+        + [params['kde_ub']] * (1 if n_T_Ubs else 0)
+        + [0] * (n_T_Ubs - 1)
+        + [0] * (n_BPD_T_Ubs + n_Ternary_Ubs)
     )
 
     dE3dtdy = (
         [
             0,
-            -params['kon_E3_binary'] * params['fu_ic'] * E3 / params['Vic'],
+            - params['kon_E3_binary'] * params['fu_ic'] * E3 / params['Vic'],
             0,
-            -params['kon_E3_binary'] * params['fu_ic'] * BPD_ic / params['Vic'] - params['kon_E3_ternary'] * (BPD_T + np.sum(BPD_T_Ubs)) / params['Vic'],
-            -params['kon_E3_ternary'] * E3 / params['Vic'],
+            - params['kon_E3_binary'] * params['fu_ic'] * BPD_ic / params['Vic']
+            - params['kon_E3_ternary'] * (BPD_T + np.sum(BPD_T_Ubs)) / params['Vic'],
+            - params['kon_E3_ternary'] * E3 / params['Vic'],
             params['koff_E3_binary'],
             params['koff_E3_ternary']
-        ] +
-        ([0] * (2 * params['n'])) +
-        ([params['koff_E3_ternary']] * params['n'])
+        ]
+        + [0] * n_T_Ubs
+        + [- params['kon_E3_ternary'] * E3 / params['Vic']] * n_BPD_T_Ubs
+        + [params['koff_E3_ternary']] * n_Ternary_Ubs
     )
 
     dBPD_Tdtdy = (
@@ -658,30 +676,33 @@ def jac_kinetic_rates(y: NDArray[np.float64], params: dict[str, float]) -> NDArr
             0,
             params['kon_T_binary'] * params['fu_ic'] * T / params['Vic'],
             params['kon_T_binary'] * params['fu_ic'] * BPD_ic / params['Vic'],
-            -params['kon_E3_ternary'] * BPD_T / params['Vic'],
-            -params['koff_T_binary'] - params['kon_E3_ternary'] * E3 / params['Vic'] - params['kdeg_T'],
+            - params['kon_E3_ternary'] * BPD_T / params['Vic'],
+            - (params['koff_T_binary'] + params['kdeg_T'])
+            - params['kon_E3_ternary'] * E3 / params['Vic'],
             0,
             params['koff_E3_ternary']
-        ] +
-        ([0] * params['n']) +
-        ([params['kde_ub']] * (0 if params['n'] == 0 else 1)) + ([0] * (params['n'] - 1)) +
-        ([0] * params['n'])
+        ]
+        + [0] * n_T_Ubs
+        + [params['kde_ub']] * (1 if n_BPD_T_Ubs else 0)
+        + [0] * (n_BPD_T_Ubs - 1)
+        + [0] * n_Ternary_Ubs
     )
 
     dBPD_E3dtdy = (
         [
             0,
             params['kon_E3_binary'] * params['fu_ic'] * E3 / params['Vic'],
-            -params['kon_T_ternary'] * BPD_E3 / params['Vic'],
+            - params['kon_T_ternary'] * BPD_E3 / params['Vic'],
             params['kon_E3_binary'] * params['fu_ic'] * BPD_ic / params['Vic'],
             0,
-            -params['koff_E3_binary'] - params['kon_T_ternary'] * (T + np.sum(T_Ubs)) / params['Vic'],
+            - params['koff_E3_binary']
+            - params['kon_T_ternary'] * (T + np.sum(T_Ubs)) / params['Vic'],
             params['koff_T_ternary'] + params['kdeg_T']
-        ] +
-        ([params['kon_T_ternary'] * BPD_E3 / params['Vic']] * params['n']) +
-        ([0] * params['n']) +
-        ([params['koff_T_ternary'] + params['kdeg_T']] * (params['n'] - 1)) +
-        ([params['koff_T_ternary'] + params['kdeg_T'] + params['kdeg_UPS']] * (0 if params['n'] == 0 else 1))
+        ]
+        + [- params['kon_T_ternary'] * BPD_E3 / params['Vic']] * n_T_Ubs
+        + [0] * n_BPD_T_Ubs
+        + [params['koff_T_ternary'] + params['kdeg_T']] * (n_Ternary_Ubs - 1)
+        + [params['koff_T_ternary'] + params['kdeg_T'] + params['kdeg_Ternary']] * (1 if n_Ternary_Ubs else 0)
     )
 
     dTernarydtdy = (
@@ -692,9 +713,9 @@ def jac_kinetic_rates(y: NDArray[np.float64], params: dict[str, float]) -> NDArr
             params['kon_E3_ternary'] * BPD_T / params['Vic'],
             params['kon_E3_ternary'] * E3 / params['Vic'],
             params['kon_T_ternary'] * T / params['Vic'],
-            -(params['kdeg_T'] + params['koff_T_ternary'] + params['koff_E3_ternary'] + params['kub'])
-        ] +
-        [0] * (3 * params['n']) # dTernary/dt doesn't depend on T_Ubs, BPD_T_Ubs, Ternary_Ubs
+            - (params['kdeg_T'] + params['koff_T_ternary'] + params['koff_E3_ternary'] + params['kub'])
+        ]
+        + [0] * n_Ub_species  # dTernary/dt doesn't depend on T_Ubs, BPD_T_Ubs, Ternary_Ubs
     )
 
     dT_Ubdtdy_all = []  # initialize empty list for (dT_Ub/dt) / dy
@@ -702,46 +723,51 @@ def jac_kinetic_rates(y: NDArray[np.float64], params: dict[str, float]) -> NDArr
     dTernary_Ubdtdy_all = []  # initialize empty list for (dTernary_Ub/dt) / dy
     if params['n'] > 0:
         # there are ubiquitination steps
-        T_all = np.append(T_Ubs, values=0)
-        T_pairs = np.lib.stride_tricks.sliding_window_view(T_all, window_shape=2)
-
-        BPD_T_all = np.append(BPD_T_Ubs, values=0)
-        BPD_T_pairs = np.lib.stride_tricks.sliding_window_view(BPD_T_all, window_shape=2)
-
-        Ternary_all = np.insert(Ternary_Ubs, obj=0, values=Ternary)  # prepend Ternary to Ternary_Ubs
-        Ternary_pairs = np.lib.stride_tricks.sliding_window_view(Ternary_all, window_shape=2)
-
         for i in range(params['n']):  # for each ternary complex ubiquitination step
-            dT_Ubdtdy = [0] * (7 + 3 * params['n'])
-            dBPD_T_Ubdtdy = [0] * (7 + 3 * params['n'])
-            dTernary_Ub_idtdy = [0] * (7 + 3 * params['n'])  # initalize list of zeros for (dTernary_Ub_i/dt) / dy
+            # initalize list of zeros for (dUb.i/dt) / dy
+            dT_Ubdtdy = [0] * (7 + n_Ub_species)
+            dBPD_T_Ubdtdy = [0] * (7 + n_Ub_species)
+            dTernary_Ub_idtdy = [0] * (7 + n_Ub_species)
 
-            dT_Ubdtdy[1] = -params['kon_T_binary'] * params['fu_ic'] * T_pairs[i][0] / params['Vic']  # (dT.Ubi/dt) / dBPD_ic
-            dT_Ubdtdy[5] = params['kon_T_ternary'] * T_pairs[i][0] / params['Vic']  # (dT.Ubi/dt) / dBPD_E3
-            dT_Ubdtdy[7+i] = -(params['kde_ub'] + params['kdeg_T']) - \
-                params['kon_T_binary'] * params['fu_ic'] * BPD_ic / params['Vic'] - \
-                (params['kdeg_UPS'] if i == params['n'] else 0)  # (dT.Ubi/dt) / dT.Ubi
-            dT_Ubdtdy[7+i+1] = params['kde_ub']  # (dT.Ubi/dt) / dT.Ub<i+1>
-            dT_Ubdtdy[7+params['n']+i] = params['koff_T_binary']  # (dT.Ubi/dt) / dBPD.T.Ubi
-            dT_Ubdtdy[7+2*params['n']+i] = params['koff_T_ternary']  # (dT.Ubi/dt) / dTernary.Ubi
+            dT_Ubdtdy[1] = - params['kon_T_binary'] * params['fu_ic'] * T_Ubs[i] / params['Vic']  # (dT.Ubi/dt) / dBPD_ic
+            dT_Ubdtdy[5] = - params['kon_T_ternary'] * T_Ubs[i] / params['Vic']  # (dT.Ubi/dt) / dBPD_E3
+            dT_Ubdtdy[7 + i] = (
+                    - (params['kde_ub'] + params['kdeg_T'])
+                    - params['kon_T_binary'] * params['fu_ic'] * BPD_ic / params['Vic']
+                    - params['kon_T_ternary'] * BPD_E3 / params['Vic']
+                    - (params['kdeg_UPS'] if i == (n_T_Ubs - 1) else 0)
+            )  # (dT.Ubi/dt) / dT.Ubi
+            if i < (n_T_Ubs - 1):
+                dT_Ubdtdy[7 + i + 1] = params['kde_ub']  # (dT.Ubi/dt) / dT.Ub<i+1>
+            dT_Ubdtdy[7 + n_T_Ubs + i] = params['koff_T_binary']  # (dT.Ubi/dt) / dBPD.T.Ubi
+            dT_Ubdtdy[7 + n_T_Ubs + n_BPD_T_Ubs + i] = params['koff_T_ternary']  # (dT.Ubi/dt) / dTernary.Ubi
 
-            dBPD_T_Ubdtdy[1] = params['kon_T_binary'] * params['fu_ic'] * T_pairs[i][0] / params['Vic']  # (dBPD.T.Ubi/dt) / dBPD_ic
-            dBPD_T_Ubdtdy[3] = -params['kon_E3_ternary'] * BPD_T_pairs[i][0] / params['Vic']  # (dBPD.T.Ubi/dt) / dE3
-            dBPD_T_Ubdtdy[7+i] = params['kon_T_binary'] * params['fu_ic'] * BPD_ic / params['Vic']  # (dBPD.T.Ubi/dt) / dT.Ubi
-            dBPD_T_Ubdtdy[7+params['n']+i] = -(params['kde_ub'] + params['kdeg_T']) - \
-                params['koff_T_binary'] - \
-                params['kon_E3_ternary'] * E3 / params['Vic'] - \
-                (params['kdeg_UPS'] if i == params['n'] else 0)  # (dBPD.T.Ubi/dt) / dBPD.T.Ubi
-            dBPD_T_Ubdtdy[7+params['n']+i+1] = params['kde_ub']  # (dBPD.T.Ubi/dt) / dBPD.T.Ub<i+1>
-            dBPD_T_Ubdtdy[7+2*params['n']+i] = params['koff_E3_ternary']  # (dBPD.T.Ubi/dt) / dTernary.Ubi
+            dBPD_T_Ubdtdy[1] = params['kon_T_binary'] * params['fu_ic'] * T_Ubs[i] / params['Vic']  # (dBPD.T.Ubi/dt) / dBPD_ic
+            dBPD_T_Ubdtdy[3] = - params['kon_E3_ternary'] * BPD_T_Ubs[i] / params['Vic']  # (dBPD.T.Ubi/dt) / dE3
+            dBPD_T_Ubdtdy[7 + i] = params['kon_T_binary'] * params['fu_ic'] * BPD_ic / params['Vic']  # (dBPD.T.Ubi/dt) / dT.Ubi
+            dBPD_T_Ubdtdy[7 + n_T_Ubs + i] = (
+                    - (params['kde_ub'] + params['kdeg_T'])
+                    - params['koff_T_binary']
+                    - params['kon_E3_ternary'] * E3 / params['Vic']
+                    - (params['kdeg_UPS'] if i == (n_BPD_T_Ubs - 1) else 0)
+            )  # (dBPD.T.Ubi/dt) / dBPD.T.Ubi
+            if i < (n_BPD_T_Ubs - 1):
+                dBPD_T_Ubdtdy[ 7 + n_T_Ubs + i + 1] = params['kde_ub']  # (dBPD.T.Ubi/dt) / dBPD.T.Ub<i+1>
+            dBPD_T_Ubdtdy[7 + n_T_Ubs + n_BPD_T_Ubs + i] = params['koff_E3_ternary']  # (dBPD.T.Ubi/dt) / dTernary.Ubi
 
-            dTernary_Ub_idtdy[3] = params['kon_E3_ternary'] * BPD_T_pairs[i][0] / params['Vic']  # (dTernary.Ubi/dt) / dE3
-            dTernary_Ub_idtdy[5] = params['kon_T_ternary'] * T_pairs[i][0] / params['Vic']  # (dTernary.Ubi/dt) / dBPD.E3
-            dTernary_Ub_idtdy[7+i] = params['kon_T_ternary'] * BPD_E3 / params['Vic']  # (dTernary.Ubi/dt) / dT.Ubi
-            dTernary_Ub_idtdy[7+params['n']+i] = params['kon_E3_ternary'] * E3 / params['Vic']  # (dTernary.Ubi/dt) / dBPD.T.Ubi
-            dTernary_Ub_idtdy[7+2*params['n']+i-1] = params['kub']  # (dTernary_Ub_i/dt) / dTernary_Ub_<i-1>
-            dTernary_Ub_idtdy[7+2*params['n']+i] = -(params['kdeg_T'] + params['koff_T_ternary'] + params['koff_E3_ternary'] + params['kub']) - \
-                (params['kdeg_UPS'] if i == params['n'] else 0)  # (dTernary_Ub_i/dt) / dTernary_Ub_i
+            dTernary_Ub_idtdy[3] = params['kon_E3_ternary'] * BPD_T_Ubs[i] / params['Vic']  # (dTernary.Ubi/dt) / dE3
+            dTernary_Ub_idtdy[5] = params['kon_T_ternary'] * T_Ubs[i] / params['Vic']  # (dTernary.Ubi/dt) / dBPD.E3
+            dTernary_Ub_idtdy[7 + i] = params['kon_T_ternary'] * BPD_E3 / params['Vic']  # (dTernary.Ubi/dt) / dT.Ubi
+            dTernary_Ub_idtdy[7 + n_T_Ubs + i] = params['kon_E3_ternary'] * E3 / params['Vic']  # (dTernary.Ubi/dt) / dBPD.T.Ubi
+            if i == 0:
+                dTernary_Ub_idtdy[6] = params['kub']
+            else:
+                dTernary_Ub_idtdy[7 + n_T_Ubs + n_BPD_T_Ubs + i - 1] = params['kub']  # (dTernary_Ub_i/dt) / dTernary_Ub_<i-1>
+            dTernary_Ub_idtdy[7 + n_T_Ubs + n_BPD_T_Ubs + i] = (
+                    - (params['kdeg_T'] + params['koff_T_ternary'] + params['koff_E3_ternary'])
+                    - (0 if i == (n_Ternary_Ubs - 1) else params['kub'])
+                    - (params['kdeg_Ternary'] if i == (n_Ternary_Ubs - 1) else 0)
+            )  # (dTernary_Ub_i/dt) / dTernary_Ub_i
 
             dT_Ubdtdy_all.append(dT_Ubdtdy)
             dBPD_T_Ubdtdy_all.append(dBPD_T_Ubdtdy)
