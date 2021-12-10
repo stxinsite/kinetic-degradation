@@ -1061,7 +1061,7 @@ UNIT TESTING
 def test_total_species(df, regex):
     totals = df.filter(regex=regex).sum(axis=1)  # pd.Series: total amounts at time points
     baseline = totals.iloc[0]
-    is_success = np.allclose(totals, baseline)
+    is_success = np.allclose(totals, baseline, rtol=0.01)
     if not is_success:
         print(totals)
 
