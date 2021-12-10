@@ -15,6 +15,7 @@ n: 4
 kub: 500
 kde_ub: 250
 kdeg_UPS: 500
+kdeg_Ternary: 0
 MTT_deg: 0.017
 fu_ec: 1
 fu_ic: 1

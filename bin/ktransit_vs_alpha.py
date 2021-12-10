@@ -46,17 +46,17 @@ if __name__ == '__main__':
 
     num_alpha = 50
     alpha_range = np.geomspace(start = 0.1, stop = 300, num = num_alpha)  # geometric range of alpha values
-    ktransit_UPS_range = np.array([250, 500, 1000, 2000, 4000, 10000, 100000])  # range of ktransit_UPS values
+    kub_range = np.array([250, 500, 1000, 2000, 4000, 10000, 100000])  # range of kub values
 
-    # all combinations of alpha and ktransit_UPS
+    # all combinations of alpha and kub
     params_range = [
-        (alpha, ktransit_UPS)
-        for ktransit_UPS in ktransit_UPS_range
+        (alpha, kub)
+        for kub in kub_range
         for alpha in alpha_range
         ]
     params_copies = [params.copy() for _ in params_range]  # copies of original params
     new_params = [
-        update_params(params_copy, ['alpha', 'ktransit_UPS'], new_values)
+        update_params(params_copy, ['alpha', 'kub'], new_values)
         for (params_copy, new_values) in zip (params_copies, params_range)
     ]
 
@@ -70,6 +70,6 @@ if __name__ == '__main__':
     pool.join()
 
     result = pd.concat(outputs)  # concat outputs into one pd.DataFrame
-    result['alpha'] = np.tile(alpha_range, reps = len(initial_BPD_ec_concs) * len(ktransit_UPS_range))
-    result['ktransit_UPS'] = np.repeat(ktransit_UPS_range, repeats = len(initial_BPD_ec_concs) * len(alpha_range))
+    result['alpha'] = np.tile(alpha_range, reps = len(initial_BPD_ec_concs) * len(kub_range))
+    result['kub'] = np.repeat(kub_range, repeats = len(initial_BPD_ec_concs) * len(alpha_range))
     result.to_csv(f"./saved_objects/{PROTAC_ID}_ktransit_vs_alpha_DEG.csv")  # save dataframe
