@@ -1,0 +1,11 @@
+name: kinetic-model
+dependencies:
+  - python>=3.9
+  - pip
+  - numpy
+  - scipy
+  - pandas
+  - matplotlib
+  - seaborn
+  - pyyaml
+  - conda-forge::numdifftools

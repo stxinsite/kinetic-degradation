@@ -12,8 +12,9 @@ Kd_E3_ternary: 3.1
 kon_E3_ternary: 3600.0
 koff_E3_ternary: 11160.0
 n: 0
-MTT_deg: 0
-ktransit_UPS: 0
+kub: 0
+kde_ub: 0
+kdeg_UPS: 0
 fu_ec: 1
 fu_ic: 1
 PS_cell: 0
