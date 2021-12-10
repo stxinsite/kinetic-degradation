@@ -58,7 +58,7 @@ The config file must contain the following keys:
     ```yaml
     - n: number of ubiquitination steps before degradation
     - MTT_deg: mean transit time of degradation
-    - ktransit_UPS: transit rate for delay between each ubiquitination step ((n+1) / MTT_deg)
+    - kub: transit rate for delay between each ubiquitination step ((n+1) / MTT_deg)
     - fu_ec: fraction unbound extracellular BPD
     - fu_ic: fraction unbound intracellular BPD
     - PS_cell: permeability-surface area product
@@ -81,7 +81,7 @@ A sufficient number of kinetic rate parameters **must** be defined. The `Kinetic
 For modeling protein degradation, all the parameters in the previous section must be specified. If the process of interest is ternary complex formation, this is just a special case of the kinetic proofreading model in which no ubiquitination or degradation occurs in the cell. To model ternary complex formation, set the following parameters to 0 in the config file:
 - n
 - MTT_deg
-- ktransit_UPS
+- kub
 - kprod_T
 - kdeg_T
 

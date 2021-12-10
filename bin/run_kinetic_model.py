@@ -18,7 +18,7 @@ if __name__ == '__main__':
     """Fixed initial intracellular BPD concentration
     over a range of time points.
     """
-    t_eval = np.linspace(0, 24, num=240)
+    t_eval = np.linspace(0, 6, num=240)
     initial_BPD_concs = [0.1]
 
     result = kt.run_kinetic_model(
