@@ -3,7 +3,7 @@ This module contains functions used to calculate target protein degradation, ter
 various configurations of model parameters and initial values.
 """
 
-from typing import Iterable, Optional
+from typing import Iterable, Union, Optional
 import yaml
 import numpy as np
 from numpy.typing import ArrayLike
@@ -34,10 +34,10 @@ To do:
 """
 
 
-def solve_target_degradation(t_eval: ArrayLike,
+def solve_target_degradation(t_eval: Union[ArrayLike, float, int],
                              params: dict[str, float],
-                             initial_BPD_ec_concs: Optional[Iterable] = None,
-                             initial_BPD_ic_concs: Optional[Iterable] = None,
+                             initial_BPD_ec_concs: Optional[Union[Iterable, float]] = None,
+                             initial_BPD_ic_concs: Optional[Union[Iterable, float]] = None,
                              return_only_final_state: bool = False,
                              PROTAC_ID: Optional[str] = None) -> pd.DataFrame:
     """Calculates target protein degradation, ternary complex formation, and Dmax
@@ -69,6 +69,13 @@ def solve_target_degradation(t_eval: ArrayLike,
         percent degradation, ternary formation relative to baseline total Target amount and
         percent Dmax for all initial concentrations of degrader over a range of time points
     """
+    if isinstance(t_eval, float) or isinstance(t_eval, int):
+        t_eval = np.linspace(start=0, stop=t_eval)
+    if isinstance(initial_BPD_ec_concs, float) or isinstance(initial_BPD_ec_concs, int):
+        initial_BPD_ec_concs = np.array([initial_BPD_ec_concs])
+    if isinstance(initial_BPD_ic_concs, float) or isinstance(initial_BPD_ic_concs, int):
+        initial_BPD_ic_concs = np.array([initial_BPD_ic_concs])
+
     if initial_BPD_ec_concs is None and initial_BPD_ic_concs is None:
         print('No initial concentrations of degrader were provided.')
         return None
@@ -95,20 +102,53 @@ def solve_target_degradation(t_eval: ArrayLike,
 
     result = pd.concat(outputs, ignore_index=True)
     result['PROTAC'] = PROTAC_ID
+    result['Kd_T_binary'] = params['Kd_T_binary']
+    result['kon_T_binary'] = params['kon_T_binary']
+    result['kub'] = params['kub']
+    result['alpha'] = params['alpha']
     return result
 
 
 def run_kinetic_model(config_files: list[str],
                       protac_IDs: list[str],
                       t_eval: ArrayLike = np.linspace(0, 1),
-                      initial_BPD_ic_concs: Optional[Iterable] = None,
                       initial_BPD_ec_concs: Optional[Iterable] = None,
+                      initial_BPD_ic_concs: Optional[Iterable] = None,
                       return_only_final_state: bool = False) -> pd.DataFrame:
-    outputs = []
-    for config, protac in zip(config_files, protac_IDs):
-        params = get_params_from_config(config)
+    """Runs kinetic model for each pair of initial extracellular and
+    intracellular degrader concentrations for each config and PROTAC provided.
 
-        df = solve_target_degradation(
+    Parameters
+    ----------
+    config_files : list[str]
+        config filenames
+
+    protac_IDs : list[str]
+        PROTAC identifiers
+
+    t_eval : ArrayLike
+        time points at which to store state of system
+
+    initial_BPD_ec_concs : Optional[Iterable]
+        initial concentration(s) of extracellular degrader
+
+    initial_BPD_ic_concs : Optional[Iterable]
+        initial concentration(s) of intracellular degrader
+
+    return_only_final_state : bool
+        whether to return only final state of system
+
+    Returns
+    -------
+    pd.DataFrame
+        degradation, ternary complex formation, and Dmax for each time point and initial degrader concentration
+    """
+    outputs: list[pd.DataFrame] = []
+
+    for config, protac in zip(config_files, protac_IDs):
+        params: dict[str, float] = get_params_from_config(config)
+
+        df: pd.DataFrame = solve_target_degradation(
             t_eval=t_eval,
             params=params,
             initial_BPD_ec_concs=initial_BPD_ec_concs,
@@ -119,22 +159,86 @@ def run_kinetic_model(config_files: list[str],
 
         outputs.append(df)
 
-    result = pd.concat(outputs, ignore_index=True)
+    result: pd.DataFrame = pd.concat(outputs, ignore_index=True)
     return result
+
+
+def kd_T_binary_vs_alpha(config_filename: str,
+                         protac_id: str,
+                         t_eval: ArrayLike,
+                         alpha_range,
+                         kd_T_binary_range,
+                         initial_BPD_ec_conc=None,
+                         initial_BPD_ic_conc=None,
+                         ):
+    keys_to_update = [
+        'koff_T_binary',
+        'koff_T_ternary',
+        'koff_E3_ternary',
+        'Kd_T_ternary',
+        'Kd_E3_ternary'
+    ]
+    params = get_params_from_config(config_filename=config_filename)
+    params = set_keys_to_none(params, keys=keys_to_update)
+
+    params_range = [
+        (kd, alpha)
+        for kd in kd_T_binary_range
+        for alpha in alpha_range
+    ]
+    params_copies = [params.copy() for _ in params_range]
+    new_params = [
+        update_params(params_copy, ['Kd_T_binary', 'alpha'], new_params)
+        for params_copy, new_params in zip(params_copies, params_range)
+    ]
+
+    pool = Pool(processes=cpu_count())
+    inputs = [
+        (t_eval, this_params, initial_BPD_ec_conc, initial_BPD_ic_conc, True, protac_id)
+        for this_params in new_params
+    ]
+    print(inputs)
+    outputs = pool.starmap(solve_target_degradation, inputs)
+    pool.close()
+    pool.join()
+
+    result = pd.concat(outputs)
+    return result
+
+
+def get_params_from_dict(params_dict) -> Optional[dict[str, float]]:
+    params = KineticParameters(params_dict)
+    if params.is_fully_defined():
+        return params.params
+    else:
+        return None
 
 
 def get_params_from_config(config_filename: str) -> dict[str, float]:
     # this will probably break if cwd is not kinetic-degradation
     with open(file=f'./data/{config_filename}', mode='r') as file:
-        config_dict = yaml.safe_load(file)
+        config_dict: dict = yaml.safe_load(file)
 
-    params = KineticParameters(config_dict)
-    if params.is_fully_defined():
-        result = params.params
-    else:
+    params = get_params_from_dict(config_dict)
+    if params is None:
         raise ValueError(f'Parameters in {config_filename} are insufficient or inconsistent.')
+    else:
+        return params
 
-    return result
+
+def set_keys_to_none(a_dict, keys):
+    for key in keys:
+        a_dict[key] = None
+
+    return a_dict
+
+
+def update_params(params, keys, values):
+    assert len(keys) == len(values), "Length of keys to update in params must equal length of values."
+    for key, val in zip(keys, values):
+        params[key] = val
+    return get_params_from_dict(params)
+
 
 """
 DO NOT USE YET. WILL NOT WORK.
