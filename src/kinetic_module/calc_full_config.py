@@ -70,7 +70,7 @@ class KineticParameters(object):
             kinetic rate constants and model parameters for rate equations
         """
         self._params: dict[str, float] = params.copy()
-        self.warning_messages: set[str] = {}
+        self.warning_messages: set[str] = set()
         self.forward_pass()
         self.backward_pass()
 
@@ -88,17 +88,17 @@ class KineticParameters(object):
         """
 
         for LHS_key, RHS_key1, RHS_key2, power in self.expression_list[::direction]:
-            value: Optional[float] = self.params[LHS_key]
+            value: Optional[float] = self._params[LHS_key]
             proposed_value: Optional[float]
 
-            if self.params[RHS_key1] and self.params[RHS_key2]:
-                # both right-hand side keys have not None values
-                proposed_value = self.params[RHS_key1] * (self.params[RHS_key2] ** power)
+            if self._params[RHS_key1] and self._params[RHS_key2]:
+                # both right-hand side values are not None
+                proposed_value = self._params[RHS_key1] * (self._params[RHS_key2] ** power)
             else:
                 proposed_value = None
 
-            if proposed_value is not None:
-                if value is not None:
+            if proposed_value:
+                if value:
                     # if left-hand side key already has value, check consistency with proposed value
                     if not np.isclose(value, proposed_value, rtol = 0.05):
                         self.warning_messages.add(
@@ -106,7 +106,7 @@ class KineticParameters(object):
                         )
                 else:
                     # if left-hand side value is None, update with proposed value
-                    self.params[LHS_key] = proposed_value
+                    self._params[LHS_key] = proposed_value
 
     def forward_pass(self) -> None:
         """Checks or calculates parameters in forward direction.
@@ -121,12 +121,14 @@ class KineticParameters(object):
     def is_fully_defined(self) -> bool:
         """Checks whether all parameters are known and consistent.
         """
+        # check for any values left None
+        for LHS_key, RHS_key1, RHS_key2, power in self.expression_list:
+            if self._params[LHS_key] is None:
+                self.warning_messages.add(f"{LHS_key} is undefined")
+
         if len(self.warning_messages):
-            print(self.warning_messages)
+            # check for any warning messages
+            print(*self.warning_messages, sep='\n')
             return False
-        else:
-            for LHS_key, RHS_key1, RHS_key2, power in self.expression_list:
-                if self.params[LHS_key] is None:
-                    return False
-                    
+
         return True
