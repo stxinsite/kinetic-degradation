@@ -102,7 +102,7 @@ class KineticParameters(object):
                     # if left-hand side key already has value, check consistency with proposed value
                     if not np.isclose(value, proposed_value, rtol = 0.05):
                         self.warning_messages.add(
-                            f"{LHS_key} = {value} is not consistent with {RHS_key1} {'*' if power == 1 else '/'} {RHS_key2} = {proposed_value}"
+                            f"{LHS_key} = {value} is inconsistent with {RHS_key1} {'*' if power == 1 else '/'} {RHS_key2} = {proposed_value}"
                         )
                 else:
                     # if left-hand side value is None, update with proposed value
