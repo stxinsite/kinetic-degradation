@@ -29,6 +29,7 @@ def wrap_check_grad(x0, params, n_species):
 
 class MyTestCase(unittest.TestCase):
     def test_jacobian(self):
+        """Test Jacobian at initial values"""
         params = kt.get_params_from_config('unit_test_config.yml')
 
         y0 = initial_values(params, BPD_ec=0.1*params['Vec'], BPD_ic=0.1*params['Vec'])
@@ -39,6 +40,7 @@ class MyTestCase(unittest.TestCase):
         self.assertTrue(np.allclose(grad_err, 0))
 
     def test_jacobian_at_time(self):
+        """Test Jacobian at system at 1 hour with scipy.optimize.checkgrad()"""
         params = kt.get_params_from_config('unit_test_config.yml')
 
         y0 = initial_values(params, BPD_ec=0.1*params['Vec'], BPD_ic=0.1*params['Vec'])
@@ -53,6 +55,7 @@ class MyTestCase(unittest.TestCase):
         self.assertTrue(np.allclose(grad_err, 0))
 
     def test_jacobian_with_nd(self):
+        """Test Jacobian with system at 1 hour with numdifftools"""
         params = kt.get_params_from_config('unit_test_config.yml')
 
         y0 = initial_values(params, BPD_ec=0.1*params['Vec'], BPD_ic=0.1*params['Vec'])
