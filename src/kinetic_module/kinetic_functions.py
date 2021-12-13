@@ -1,13 +1,13 @@
 """
-This module contains functions used for a kinetic model of target protein
-degradation.
+This module contains functions used to implement a kinetic proofreading model of target protein degradation.
 """
+from typing import Optional
 
-from typing import Any
 import numpy as np
-from numpy.typing import NDArray
+from numpy.typing import NDArray, ArrayLike
 import pandas as pd
-import scipy.integrate as integrate
+import sklearn
+from scipy.integrate import solve_ivp
 from scipy.optimize import root
 from matplotlib import pyplot as plt
 
@@ -82,8 +82,9 @@ def dBPD_ecdt(BPD_ec: float,
         dBPD_ec / dt
     """
     return (
-        - params['PS_cell'] * params['num_cells'] * ((params['fu_ec'] * BPD_ec / params['Vec']) - (params['fu_ic'] * BPD_ic / params['Vic']))
-        )
+            - params['PS_cell'] * params['num_cells'] * (
+                (params['fu_ec'] * BPD_ec / params['Vec']) - (params['fu_ic'] * BPD_ic / params['Vic']))
+    )
 
 
 def dBPD_icdt(BPD_ec: float,
@@ -132,13 +133,14 @@ def dBPD_icdt(BPD_ec: float,
         dBPD_ic / dt
     """
     return (
-        params['PS_cell'] * ((params['fu_ec'] * BPD_ec / params['Vec']) - (params['fu_ic'] * BPD_ic / params['Vic']))
-        - params['kon_T_binary'] * params['fu_ic'] * BPD_ic * (T + np.sum(T_Ubs)) / params['Vic']
-        + (params['koff_T_binary'] + params['kdeg_T']) * (BPD_T + np.sum(BPD_T_Ubs))
-        - params['kon_E3_binary'] * params['fu_ic'] * BPD_ic * E3 / params['Vic']
-        + params['koff_E3_binary'] * BPD_E3
-        + params['kdeg_UPS'] * (BPD_T_Ubs[-1] if len(BPD_T_Ubs) else 0)
-        )
+            params['PS_cell'] * (
+                (params['fu_ec'] * BPD_ec / params['Vec']) - (params['fu_ic'] * BPD_ic / params['Vic']))
+            - params['kon_T_binary'] * params['fu_ic'] * BPD_ic * (T + np.sum(T_Ubs)) / params['Vic']
+            + (params['koff_T_binary'] + params['kdeg_T']) * (BPD_T + np.sum(BPD_T_Ubs))
+            - params['kon_E3_binary'] * params['fu_ic'] * BPD_ic * E3 / params['Vic']
+            + params['koff_E3_binary'] * BPD_E3
+            + params['kdeg_UPS'] * (BPD_T_Ubs[-1] if len(BPD_T_Ubs) else 0)
+    )
 
 
 def dTargetdt(BPD_ic: float,
@@ -179,13 +181,13 @@ def dTargetdt(BPD_ic: float,
         dTarget / dt
     """
     return (
-        params['kprod_T'] - params['kdeg_T'] * T
-        - params['kon_T_binary'] * params['fu_ic'] * BPD_ic * T / params['Vic']
-        + params['koff_T_binary'] * BPD_T
-        - params['kon_T_ternary'] * BPD_E3 * T / params['Vic']
-        + params['koff_T_ternary'] * Ternary
-        + params['kde_ub'] * (T_Ubs[0] if len(T_Ubs) else 0)
-        )
+            params['kprod_T'] - params['kdeg_T'] * T
+            - params['kon_T_binary'] * params['fu_ic'] * BPD_ic * T / params['Vic']
+            + params['koff_T_binary'] * BPD_T
+            - params['kon_T_ternary'] * BPD_E3 * T / params['Vic']
+            + params['koff_T_ternary'] * Ternary
+            + params['kde_ub'] * (T_Ubs[0] if len(T_Ubs) else 0)
+    )
 
 
 def dE3dt(BPD_ic: float,
@@ -230,11 +232,11 @@ def dE3dt(BPD_ic: float,
         dE3 / dt
     """
     return (
-        - params['kon_E3_binary'] * params['fu_ic'] * BPD_ic * E3 / params['Vic']
-        + params['koff_E3_binary'] * BPD_E3
-        - params['kon_E3_ternary'] * E3 * (BPD_T + np.sum(BPD_T_Ubs)) / params['Vic']
-        + params['koff_E3_ternary'] * (Ternary + np.sum(Ternary_Ubs))
-        )
+            - params['kon_E3_binary'] * params['fu_ic'] * BPD_ic * E3 / params['Vic']
+            + params['koff_E3_binary'] * BPD_E3
+            - params['kon_E3_ternary'] * E3 * (BPD_T + np.sum(BPD_T_Ubs)) / params['Vic']
+            + params['koff_E3_ternary'] * (Ternary + np.sum(Ternary_Ubs))
+    )
 
 
 def dBPD_Tdt(BPD_ic: float,
@@ -275,12 +277,12 @@ def dBPD_Tdt(BPD_ic: float,
         dBPD.T / dt
     """
     return (
-        params['kon_T_binary'] * params['fu_ic'] * BPD_ic * T / params['Vic']
-        - (params['koff_T_binary'] + params['kdeg_T']) * BPD_T
-        - params['kon_E3_ternary'] * BPD_T * E3 / params['Vic']
-        + params['koff_E3_ternary'] * Ternary
-        + params['kde_ub'] * (BPD_T_Ubs[0] if len(BPD_T_Ubs) else 0)
-        )
+            params['kon_T_binary'] * params['fu_ic'] * BPD_ic * T / params['Vic']
+            - (params['koff_T_binary'] + params['kdeg_T']) * BPD_T
+            - params['kon_E3_ternary'] * BPD_T * E3 / params['Vic']
+            + params['koff_E3_ternary'] * Ternary
+            + params['kde_ub'] * (BPD_T_Ubs[0] if len(BPD_T_Ubs) else 0)
+    )
 
 
 def dBPD_E3dt(BPD_ic: float,
@@ -323,12 +325,12 @@ def dBPD_E3dt(BPD_ic: float,
         dBPD.E3 / dt
     """
     return (
-        params['kon_E3_binary'] * params['fu_ic'] * BPD_ic * E3 / params['Vic']
-        - params['koff_E3_binary'] * BPD_E3
-        - params['kon_T_ternary'] * BPD_E3 * (T + np.sum(T_Ubs)) / params['Vic']
-        + (params['koff_T_ternary'] + params['kdeg_T']) * (Ternary + np.sum(Ternary_Ubs))
-        + params['kdeg_Ternary'] * (Ternary_Ubs[-1] if len(Ternary_Ubs) else 0)
-        )
+            params['kon_E3_binary'] * params['fu_ic'] * BPD_ic * E3 / params['Vic']
+            - params['koff_E3_binary'] * BPD_E3
+            - params['kon_T_ternary'] * BPD_E3 * (T + np.sum(T_Ubs)) / params['Vic']
+            + (params['koff_T_ternary'] + params['kdeg_T']) * (Ternary + np.sum(Ternary_Ubs))
+            + params['kdeg_Ternary'] * (Ternary_Ubs[-1] if len(Ternary_Ubs) else 0)
+    )
 
 
 def dTernarydt(T: float,
@@ -366,10 +368,11 @@ def dTernarydt(T: float,
         dTernary / dt
     """
     return (
-        params['kon_T_ternary'] * BPD_E3 * T / params['Vic']
-        + params['kon_E3_ternary'] * BPD_T * E3 / params['Vic']
-        - (params['kdeg_T'] + params['koff_T_ternary'] + params['koff_E3_ternary'] + params['kub']) * Ternary
-        )
+            params['kon_T_ternary'] * BPD_E3 * T / params['Vic']
+            + params['kon_E3_ternary'] * BPD_T * E3 / params['Vic']
+            - (params['kdeg_T'] + params['koff_T_ternary'] + params['koff_E3_ternary'] + params['kub']) * Ternary
+    )
+
 
 def dT_Ubdt(T_Ub_consec_pair: NDArray[np.float64],
             BPD_ic: float,
@@ -409,14 +412,14 @@ def dT_Ubdt(T_Ub_consec_pair: NDArray[np.float64],
         dT.Ub.i / dt
     """
     return (
-        - (params['kde_ub'] + params['kdeg_T']) * T_Ub_consec_pair[0]
-        + params['kde_ub'] * T_Ub_consec_pair[1]
-        - params['kon_T_binary'] * params['fu_ic'] * BPD_ic * T_Ub_consec_pair[0] / params['Vic']
-        + params['koff_T_binary'] * BPD_T_Ub_i
-        - params['kon_T_ternary'] * BPD_E3 * T_Ub_consec_pair[0] / params['Vic']
-        + params['koff_T_ternary'] * Ternary_Ub_i
-        - params['kdeg_UPS'] * (T_Ub_consec_pair[0] if i == params['n'] else 0)
-        )
+            - (params['kde_ub'] + params['kdeg_T']) * T_Ub_consec_pair[0]
+            + params['kde_ub'] * T_Ub_consec_pair[1]
+            - params['kon_T_binary'] * params['fu_ic'] * BPD_ic * T_Ub_consec_pair[0] / params['Vic']
+            + params['koff_T_binary'] * BPD_T_Ub_i
+            - params['kon_T_ternary'] * BPD_E3 * T_Ub_consec_pair[0] / params['Vic']
+            + params['koff_T_ternary'] * Ternary_Ub_i
+            - params['kdeg_UPS'] * (T_Ub_consec_pair[0] if i == params['n'] else 0)
+    )
 
 
 def dBPD_T_Ubdt(BPD_T_Ub_consec_pair: NDArray[np.float64],
@@ -454,14 +457,14 @@ def dBPD_T_Ubdt(BPD_T_Ub_consec_pair: NDArray[np.float64],
         dBPD.T.Ub.i / dt
     """
     return (
-        - (params['kde_ub'] + params['kdeg_T']) * BPD_T_Ub_consec_pair[0]
-        + params['kde_ub'] * BPD_T_Ub_consec_pair[1]
-        + params['kon_T_binary'] * params['fu_ic'] * BPD_ic * T_Ub_i / params['Vic']
-        - params['koff_T_binary'] * BPD_T_Ub_consec_pair[0]
-        - params['kon_E3_ternary'] * BPD_T_Ub_consec_pair[0] * E3 / params['Vic']
-        + params['koff_E3_ternary'] * Ternary_Ub_i
-        - params['kdeg_UPS'] * (BPD_T_Ub_consec_pair[0] if i == params['n'] else 0)
-        )
+            - (params['kde_ub'] + params['kdeg_T']) * BPD_T_Ub_consec_pair[0]
+            + params['kde_ub'] * BPD_T_Ub_consec_pair[1]
+            + params['kon_T_binary'] * params['fu_ic'] * BPD_ic * T_Ub_i / params['Vic']
+            - params['koff_T_binary'] * BPD_T_Ub_consec_pair[0]
+            - params['kon_E3_ternary'] * BPD_T_Ub_consec_pair[0] * E3 / params['Vic']
+            + params['koff_E3_ternary'] * Ternary_Ub_i
+            - params['kdeg_UPS'] * (BPD_T_Ub_consec_pair[0] if i == params['n'] else 0)
+    )
 
 
 def dTernary_Ubdt(Ternary_Ub_consec_pair: NDArray[np.float64],
@@ -502,13 +505,13 @@ def dTernary_Ubdt(Ternary_Ub_consec_pair: NDArray[np.float64],
         dTernary.Ub.i / dt
     """
     return (
-        params['kub'] * Ternary_Ub_consec_pair[0]
-        + params['kon_T_ternary'] * BPD_E3 * T_Ub_i / params['Vic']
-        + params['kon_E3_ternary'] * BPD_T_Ub_i * E3 / params['Vic']
-        - (params['kdeg_T'] + params['koff_T_ternary'] + params['koff_E3_ternary']) * Ternary_Ub_consec_pair[1]
-        - params['kub'] * (0 if i == params['n'] else Ternary_Ub_consec_pair[1])
-        - params['kdeg_Ternary'] * (Ternary_Ub_consec_pair[1] if i == params['n'] else 0)
-        )
+            params['kub'] * Ternary_Ub_consec_pair[0]
+            + params['kon_T_ternary'] * BPD_E3 * T_Ub_i / params['Vic']
+            + params['kon_E3_ternary'] * BPD_T_Ub_i * E3 / params['Vic']
+            - (params['kdeg_T'] + params['koff_T_ternary'] + params['koff_E3_ternary']) * Ternary_Ub_consec_pair[1]
+            - params['kub'] * (0 if i == params['n'] else Ternary_Ub_consec_pair[1])
+            - params['kdeg_Ternary'] * (Ternary_Ub_consec_pair[1] if i == params['n'] else 0)
+    )
 
 
 def kinetic_rates(y: NDArray[np.float64], params: dict[str, float]) -> NDArray[np.float64]:
@@ -613,109 +616,110 @@ def jac_kinetic_rates(y: NDArray[np.float64], params: dict[str, float]) -> NDArr
     n_Ternary_Ubs = len(Ternary_Ubs)
 
     dBPD_ecdtdy = (
-        [
-            - params['PS_cell'] * params['num_cells'] * params['fu_ec'] / params['Vec'],
-            params['PS_cell'] * params['num_cells'] * params['fu_ic'] / params['Vic']
-        ]
-        + [0] * (5 + n_Ub_species)  # dBPD_ec/dt doesn't depend on T, E3, BPD_T, BPD_E3, Ternary, T_Ubs, BPD_T_Ubs, Ternary_Ubs
+            [
+                - params['PS_cell'] * params['num_cells'] * params['fu_ec'] / params['Vec'],
+                params['PS_cell'] * params['num_cells'] * params['fu_ic'] / params['Vic']
+            ]
+            + [0] * (5 + n_Ub_species)
+    # dBPD_ec/dt doesn't depend on T, E3, BPD_T, BPD_E3, Ternary, T_Ubs, BPD_T_Ubs, Ternary_Ubs
     )
 
     dBPD_icdtdy = (
-        [
-            params['PS_cell'] * params['fu_ec'] / params['Vec'],
-            - params['PS_cell'] * params['fu_ic'] / params['Vic']
-            - params['kon_T_binary'] * params['fu_ic'] * (T + np.sum(T_Ubs)) / params['Vic']
-            - params['kon_E3_binary'] * params['fu_ic'] * E3 / params['Vic'],
-            - params['kon_T_binary'] * params['fu_ic'] * BPD_ic / params['Vic'],
-            - params['kon_E3_binary'] * params['fu_ic'] * BPD_ic / params['Vic'],
-            params['koff_T_binary'] + params['kdeg_T'],
-            params['koff_E3_binary'],
-            0
-        ]
-        + [- params['kon_T_binary'] * params['fu_ic'] * BPD_ic / params['Vic']] * n_T_Ubs
-        + [params['koff_T_binary'] + params['kdeg_T']] * (n_BPD_T_Ubs - 1)
-        + [params['koff_T_binary'] + params['kdeg_T'] + params['kdeg_UPS']] * (1 if n_BPD_T_Ubs else 0)
-        + [0] * n_Ternary_Ubs  # dBPD_ic/dt does not depend on Ternary_Ubs
+            [
+                params['PS_cell'] * params['fu_ec'] / params['Vec'],
+                - params['PS_cell'] * params['fu_ic'] / params['Vic']
+                - params['kon_T_binary'] * params['fu_ic'] * (T + np.sum(T_Ubs)) / params['Vic']
+                - params['kon_E3_binary'] * params['fu_ic'] * E3 / params['Vic'],
+                - params['kon_T_binary'] * params['fu_ic'] * BPD_ic / params['Vic'],
+                - params['kon_E3_binary'] * params['fu_ic'] * BPD_ic / params['Vic'],
+                params['koff_T_binary'] + params['kdeg_T'],
+                params['koff_E3_binary'],
+                0
+            ]
+            + [- params['kon_T_binary'] * params['fu_ic'] * BPD_ic / params['Vic']] * n_T_Ubs
+            + [params['koff_T_binary'] + params['kdeg_T']] * (n_BPD_T_Ubs - 1)
+            + [params['koff_T_binary'] + params['kdeg_T'] + params['kdeg_UPS']] * (1 if n_BPD_T_Ubs else 0)
+            + [0] * n_Ternary_Ubs  # dBPD_ic/dt does not depend on Ternary_Ubs
     )
 
     dTargetdtdy = (
-        [
-            0,
-            - params['kon_T_binary'] * params['fu_ic'] * T / params['Vic'],
-            - params['kdeg_T']
-            - params['kon_T_binary'] * params['fu_ic'] * BPD_ic / params['Vic']
-            - params['kon_T_ternary'] * BPD_E3 / params['Vic'],
-            0,
-            params['koff_T_binary'],
-            - params['kon_T_ternary'] * T / params['Vic'],
-            params['koff_T_ternary']
-        ]
-        + [params['kde_ub']] * (1 if n_T_Ubs else 0)
-        + [0] * (n_T_Ubs - 1)
-        + [0] * (n_BPD_T_Ubs + n_Ternary_Ubs)
+            [
+                0,
+                - params['kon_T_binary'] * params['fu_ic'] * T / params['Vic'],
+                - params['kdeg_T']
+                - params['kon_T_binary'] * params['fu_ic'] * BPD_ic / params['Vic']
+                - params['kon_T_ternary'] * BPD_E3 / params['Vic'],
+                0,
+                params['koff_T_binary'],
+                - params['kon_T_ternary'] * T / params['Vic'],
+                params['koff_T_ternary']
+            ]
+            + [params['kde_ub']] * (1 if n_T_Ubs else 0)
+            + [0] * (n_T_Ubs - 1)
+            + [0] * (n_BPD_T_Ubs + n_Ternary_Ubs)
     )
 
     dE3dtdy = (
-        [
-            0,
-            - params['kon_E3_binary'] * params['fu_ic'] * E3 / params['Vic'],
-            0,
-            - params['kon_E3_binary'] * params['fu_ic'] * BPD_ic / params['Vic']
-            - params['kon_E3_ternary'] * (BPD_T + np.sum(BPD_T_Ubs)) / params['Vic'],
-            - params['kon_E3_ternary'] * E3 / params['Vic'],
-            params['koff_E3_binary'],
-            params['koff_E3_ternary']
-        ]
-        + [0] * n_T_Ubs
-        + [- params['kon_E3_ternary'] * E3 / params['Vic']] * n_BPD_T_Ubs
-        + [params['koff_E3_ternary']] * n_Ternary_Ubs
+            [
+                0,
+                - params['kon_E3_binary'] * params['fu_ic'] * E3 / params['Vic'],
+                0,
+                - params['kon_E3_binary'] * params['fu_ic'] * BPD_ic / params['Vic']
+                - params['kon_E3_ternary'] * (BPD_T + np.sum(BPD_T_Ubs)) / params['Vic'],
+                - params['kon_E3_ternary'] * E3 / params['Vic'],
+                params['koff_E3_binary'],
+                params['koff_E3_ternary']
+            ]
+            + [0] * n_T_Ubs
+            + [- params['kon_E3_ternary'] * E3 / params['Vic']] * n_BPD_T_Ubs
+            + [params['koff_E3_ternary']] * n_Ternary_Ubs
     )
 
     dBPD_Tdtdy = (
-        [
-            0,
-            params['kon_T_binary'] * params['fu_ic'] * T / params['Vic'],
-            params['kon_T_binary'] * params['fu_ic'] * BPD_ic / params['Vic'],
-            - params['kon_E3_ternary'] * BPD_T / params['Vic'],
-            - (params['koff_T_binary'] + params['kdeg_T'])
-            - params['kon_E3_ternary'] * E3 / params['Vic'],
-            0,
-            params['koff_E3_ternary']
-        ]
-        + [0] * n_T_Ubs
-        + [params['kde_ub']] * (1 if n_BPD_T_Ubs else 0)
-        + [0] * (n_BPD_T_Ubs - 1)
-        + [0] * n_Ternary_Ubs
+            [
+                0,
+                params['kon_T_binary'] * params['fu_ic'] * T / params['Vic'],
+                params['kon_T_binary'] * params['fu_ic'] * BPD_ic / params['Vic'],
+                - params['kon_E3_ternary'] * BPD_T / params['Vic'],
+                - (params['koff_T_binary'] + params['kdeg_T'])
+                - params['kon_E3_ternary'] * E3 / params['Vic'],
+                0,
+                params['koff_E3_ternary']
+            ]
+            + [0] * n_T_Ubs
+            + [params['kde_ub']] * (1 if n_BPD_T_Ubs else 0)
+            + [0] * (n_BPD_T_Ubs - 1)
+            + [0] * n_Ternary_Ubs
     )
 
     dBPD_E3dtdy = (
-        [
-            0,
-            params['kon_E3_binary'] * params['fu_ic'] * E3 / params['Vic'],
-            - params['kon_T_ternary'] * BPD_E3 / params['Vic'],
-            params['kon_E3_binary'] * params['fu_ic'] * BPD_ic / params['Vic'],
-            0,
-            - params['koff_E3_binary']
-            - params['kon_T_ternary'] * (T + np.sum(T_Ubs)) / params['Vic'],
-            params['koff_T_ternary'] + params['kdeg_T']
-        ]
-        + [- params['kon_T_ternary'] * BPD_E3 / params['Vic']] * n_T_Ubs
-        + [0] * n_BPD_T_Ubs
-        + [params['koff_T_ternary'] + params['kdeg_T']] * (n_Ternary_Ubs - 1)
-        + [params['koff_T_ternary'] + params['kdeg_T'] + params['kdeg_Ternary']] * (1 if n_Ternary_Ubs else 0)
+            [
+                0,
+                params['kon_E3_binary'] * params['fu_ic'] * E3 / params['Vic'],
+                - params['kon_T_ternary'] * BPD_E3 / params['Vic'],
+                params['kon_E3_binary'] * params['fu_ic'] * BPD_ic / params['Vic'],
+                0,
+                - params['koff_E3_binary']
+                - params['kon_T_ternary'] * (T + np.sum(T_Ubs)) / params['Vic'],
+                params['koff_T_ternary'] + params['kdeg_T']
+            ]
+            + [- params['kon_T_ternary'] * BPD_E3 / params['Vic']] * n_T_Ubs
+            + [0] * n_BPD_T_Ubs
+            + [params['koff_T_ternary'] + params['kdeg_T']] * (n_Ternary_Ubs - 1)
+            + [params['koff_T_ternary'] + params['kdeg_T'] + params['kdeg_Ternary']] * (1 if n_Ternary_Ubs else 0)
     )
 
     dTernarydtdy = (
-        [
-            0,
-            0,
-            params['kon_T_ternary'] * BPD_E3 / params['Vic'],
-            params['kon_E3_ternary'] * BPD_T / params['Vic'],
-            params['kon_E3_ternary'] * E3 / params['Vic'],
-            params['kon_T_ternary'] * T / params['Vic'],
-            - (params['kdeg_T'] + params['koff_T_ternary'] + params['koff_E3_ternary'] + params['kub'])
-        ]
-        + [0] * n_Ub_species  # dTernary/dt doesn't depend on T_Ubs, BPD_T_Ubs, Ternary_Ubs
+            [
+                0,
+                0,
+                params['kon_T_ternary'] * BPD_E3 / params['Vic'],
+                params['kon_E3_ternary'] * BPD_T / params['Vic'],
+                params['kon_E3_ternary'] * E3 / params['Vic'],
+                params['kon_T_ternary'] * T / params['Vic'],
+                - (params['kdeg_T'] + params['koff_T_ternary'] + params['koff_E3_ternary'] + params['kub'])
+            ]
+            + [0] * n_Ub_species  # dTernary/dt doesn't depend on T_Ubs, BPD_T_Ubs, Ternary_Ubs
     )
 
     dT_Ubdtdy_all = []  # initialize empty list for (dT_Ub/dt) / dy
@@ -729,7 +733,8 @@ def jac_kinetic_rates(y: NDArray[np.float64], params: dict[str, float]) -> NDArr
             dBPD_T_Ubdtdy = [0] * (7 + n_Ub_species)
             dTernary_Ub_idtdy = [0] * (7 + n_Ub_species)
 
-            dT_Ubdtdy[1] = - params['kon_T_binary'] * params['fu_ic'] * T_Ubs[i] / params['Vic']  # (dT.Ubi/dt) / dBPD_ic
+            dT_Ubdtdy[1] = - params['kon_T_binary'] * params['fu_ic'] * T_Ubs[i] / params[
+                'Vic']  # (dT.Ubi/dt) / dBPD_ic
             dT_Ubdtdy[5] = - params['kon_T_ternary'] * T_Ubs[i] / params['Vic']  # (dT.Ubi/dt) / dBPD_E3
             dT_Ubdtdy[7 + i] = (
                     - (params['kde_ub'] + params['kdeg_T'])
@@ -742,9 +747,11 @@ def jac_kinetic_rates(y: NDArray[np.float64], params: dict[str, float]) -> NDArr
             dT_Ubdtdy[7 + n_T_Ubs + i] = params['koff_T_binary']  # (dT.Ubi/dt) / dBPD.T.Ubi
             dT_Ubdtdy[7 + n_T_Ubs + n_BPD_T_Ubs + i] = params['koff_T_ternary']  # (dT.Ubi/dt) / dTernary.Ubi
 
-            dBPD_T_Ubdtdy[1] = params['kon_T_binary'] * params['fu_ic'] * T_Ubs[i] / params['Vic']  # (dBPD.T.Ubi/dt) / dBPD_ic
+            dBPD_T_Ubdtdy[1] = params['kon_T_binary'] * params['fu_ic'] * T_Ubs[i] / params[
+                'Vic']  # (dBPD.T.Ubi/dt) / dBPD_ic
             dBPD_T_Ubdtdy[3] = - params['kon_E3_ternary'] * BPD_T_Ubs[i] / params['Vic']  # (dBPD.T.Ubi/dt) / dE3
-            dBPD_T_Ubdtdy[7 + i] = params['kon_T_binary'] * params['fu_ic'] * BPD_ic / params['Vic']  # (dBPD.T.Ubi/dt) / dT.Ubi
+            dBPD_T_Ubdtdy[7 + i] = params['kon_T_binary'] * params['fu_ic'] * BPD_ic / params[
+                'Vic']  # (dBPD.T.Ubi/dt) / dT.Ubi
             dBPD_T_Ubdtdy[7 + n_T_Ubs + i] = (
                     - (params['kde_ub'] + params['kdeg_T'])
                     - params['koff_T_binary']
@@ -752,17 +759,19 @@ def jac_kinetic_rates(y: NDArray[np.float64], params: dict[str, float]) -> NDArr
                     - (params['kdeg_UPS'] if i == (n_BPD_T_Ubs - 1) else 0)
             )  # (dBPD.T.Ubi/dt) / dBPD.T.Ubi
             if i < (n_BPD_T_Ubs - 1):
-                dBPD_T_Ubdtdy[ 7 + n_T_Ubs + i + 1] = params['kde_ub']  # (dBPD.T.Ubi/dt) / dBPD.T.Ub<i+1>
+                dBPD_T_Ubdtdy[7 + n_T_Ubs + i + 1] = params['kde_ub']  # (dBPD.T.Ubi/dt) / dBPD.T.Ub<i+1>
             dBPD_T_Ubdtdy[7 + n_T_Ubs + n_BPD_T_Ubs + i] = params['koff_E3_ternary']  # (dBPD.T.Ubi/dt) / dTernary.Ubi
 
             dTernary_Ub_idtdy[3] = params['kon_E3_ternary'] * BPD_T_Ubs[i] / params['Vic']  # (dTernary.Ubi/dt) / dE3
             dTernary_Ub_idtdy[5] = params['kon_T_ternary'] * T_Ubs[i] / params['Vic']  # (dTernary.Ubi/dt) / dBPD.E3
             dTernary_Ub_idtdy[7 + i] = params['kon_T_ternary'] * BPD_E3 / params['Vic']  # (dTernary.Ubi/dt) / dT.Ubi
-            dTernary_Ub_idtdy[7 + n_T_Ubs + i] = params['kon_E3_ternary'] * E3 / params['Vic']  # (dTernary.Ubi/dt) / dBPD.T.Ubi
+            dTernary_Ub_idtdy[7 + n_T_Ubs + i] = params['kon_E3_ternary'] * E3 / params[
+                'Vic']  # (dTernary.Ubi/dt) / dBPD.T.Ubi
             if i == 0:
                 dTernary_Ub_idtdy[6] = params['kub']
             else:
-                dTernary_Ub_idtdy[7 + n_T_Ubs + n_BPD_T_Ubs + i - 1] = params['kub']  # (dTernary_Ub_i/dt) / dTernary_Ub_<i-1>
+                dTernary_Ub_idtdy[7 + n_T_Ubs + n_BPD_T_Ubs + i - 1] = params[
+                    'kub']  # (dTernary_Ub_i/dt) / dTernary_Ub_<i-1>
             dTernary_Ub_idtdy[7 + n_T_Ubs + n_BPD_T_Ubs + i] = (
                     - (params['kdeg_T'] + params['koff_T_ternary'] + params['koff_E3_ternary'])
                     - (0 if i == (n_Ternary_Ubs - 1) else params['kub'])
@@ -775,10 +784,11 @@ def jac_kinetic_rates(y: NDArray[np.float64], params: dict[str, float]) -> NDArr
 
     # (7 + 3*n) x (7 + 3*n) array
     all_jacs = np.array(
-        [dBPD_ecdtdy, dBPD_icdtdy, dTargetdtdy, dE3dtdy, dBPD_Tdtdy, dBPD_E3dtdy, dTernarydtdy]  # 7 x (7 + 3*n) list of lists
+        [dBPD_ecdtdy, dBPD_icdtdy, dTargetdtdy, dE3dtdy, dBPD_Tdtdy, dBPD_E3dtdy,
+         dTernarydtdy]  # 7 x (7 + 3*n) list of lists
         + dT_Ubdtdy_all  # n x (7 + 3*n) list of lists
-        + dBPD_T_Ubdtdy_all # n x (7 + 3*n) list of lists
-        + dTernary_Ubdtdy_all # n x (7 + 3*n) list of lists
+        + dBPD_T_Ubdtdy_all  # n x (7 + 3*n) list of lists
+        + dTernary_Ubdtdy_all  # n x (7 + 3*n) list of lists
     )
 
     return all_jacs
@@ -789,11 +799,24 @@ SOLVE SYSTEM OF ODES
 """
 
 
-def initial_values(params, BPD_ec=0, BPD_ic=0):
+def initial_values(params: dict[str, float], BPD_ec: float = 0, BPD_ic: float = 0) -> NDArray[float]:
     """Returns array of initial values for species amounts.
 
-    Args:
-        params: dict; model parameters.
+    Parameters
+    ----------
+    params : dict[str, float]
+        model parameters.
+
+    BPD_ec : float
+        initial amount of extracellular BPD
+
+    BPD_ic : float
+        initial amount of intracellular BPD
+
+    Returns
+    -------
+    NDArray[float]
+        initial values for system species amounts
     """
     T = params['Conc_T_base'] * params['Vic']
     E3 = params['Conc_E3_base'] * params['Vic']
@@ -805,81 +828,112 @@ def initial_values(params, BPD_ec=0, BPD_ic=0):
     Ternary_Ubs = [0] * params['n']
     return np.array([BPD_ec, BPD_ic, T, E3, BPD_T, BPD_E3, Ternary] + T_Ubs + BPD_T_Ubs + Ternary_Ubs)
 
-def calc_concentrations(t_eval, y0, params, max_step=np.inf, T_total_baseline=None, T_total_steady_state=None):
-    """
-    Solve the initial value problem for the amounts of species in
-    PROTAC-induced target protein degradation via the ubiquitin-proteasome system.
 
-    Args:
-        t_eval: array_like; time points at which to store computed solution.
-        y0: array_like; the initial values of all species in the system in the following order:
-            [
-                BPD_ec, BPD_ic, T, E3, BPD_T, BPD_E3, Ternary,
-                T_Ub_1, ..., T_Ub_n, BPD_T_Ub_1, ..., BPD_T_Ub_n, Ternary_Ub_1, ..., Ternary_Ub_n
-            ].
-        params: dict; kinetic rate constants and model parameters for rate equations.
-        max_step: float; maximum allowed step size for solver. It is recommended to set
-            to small value (e.g. 0.001) for systems with small initial values.
-        T_total_baseline: total amount of Target in system at baseline.
-        T_total_steady_state: total amount of Target at system steady state.
+def calc_concentrations(t_eval: ArrayLike,
+                        y0: NDArray[float],
+                        params: dict[str, float],
+                        max_step: float = np.inf,
+                        T_halfway_steady_state: float = None) -> sklearn.utils.Bunch:
+    """Solves the initial value problem for target protein degradation.
+
+    Computes the amounts of species in the system over time. It is recommended to set max_step to a small value
+    (e.g. 0.001) for systems with small initial values.
+
+    Parameters
+    ----------
+    t_eval : ArrayLike
+        time points at which to store computed solution
+
+    y0 : NDArray[float]
+        initial values of species amounts in this order
+            BPD_ec, BPD_ic, T, E3, BPD_T, BPD_E3, Ternary,
+            T_Ub_1, ..., T_Ub_n, BPD_T_Ub_1, ..., BPD_T_Ub_n, Ternary_Ub_1, ..., Ternary_Ub_n
+
+    params : dict[str, float]
+        kinetic rate constants and model parameters for rate equations
+
+    max_step : float
+        maximum allowed step size for solver.
+
+    T_halfway_steady_state : float
+        amount of total Target that is halfway between baseline and steady state amounts
+
+    Returns
+    -------
+    sklearn.utils.Bunch
+        solution returned by scipy.integrate.solve_ivp()
     """
-    def rates(t, y, params, T_total_baseline, T_total_steady_state):
-        """
-        Return ODEs evaluated at (t, y).
+
+    def rates(t, y, params, T_halfway_steady_state):
+        """Returns ODEs evaluated at (t, y).
+
         Must have call signature func(t, y, *args).
         """
         return kinetic_rates(y, params)
 
-    def jac_rates(t, y, params, T_total_baseline, T_total_steady_state):
-        """
-        Return Jacobian of ODEs evaluated at (t, y).
+    def jac_rates(t, y, params, T_halfway_steady_state):
+        """Returns Jacobian of ODEs evaluated at (t, y).
+
         Must have identical call signature as rates().
         """
         return jac_kinetic_rates(y, params)
 
-    def t_half_event(t, y, params, T_total_baseline, T_total_steady_state):
-        """
-        Return difference between total amount of Target in system at t and
-        halfway to Target steady state from baseline.
+    def t_half_event(t, y, params, T_halfway_steady_state) -> float:
+        """Returns difference between total amount of Target in system at time t
+        and the amount that is halfway between baseline and steady state amounts.
+
         Must have identical call signature as rates().
         """
-        C = 0.5 * (T_total_baseline - T_total_steady_state)  # halfway between baseline and steady state
-        T_total_at_t = np.sum(np.concatenate((y[[2,4]], y[6:])))  # total amount of Target in system at t
-        return T_total_at_t - C
+        T_total_at_t = np.sum(np.concatenate((y[[2, 4]], y[6:])))  # total amount of Target in system at time t
+        return T_total_at_t - T_halfway_steady_state
 
-    t_half_event.terminal = True  # if t_half_event changes sign, solver will terminate
-    # tmin = np.min(times)
-    tmax = np.max(t_eval)
+    t_half_event.terminal = True  # if t_half_event() changes sign, solver will terminate
+    t_max = np.max(t_eval)
 
-    result = integrate.solve_ivp(rates, (0, tmax), y0,
-                                 method = 'BDF',
-                                 t_eval = t_eval,
-                                 args = (params, T_total_baseline, T_total_steady_state),
-                                 max_step = max_step,
-                                 jac = jac_rates,
-                                 events = t_half_event if (T_total_baseline is not None) and (T_total_steady_state is not None) else None
-                                 )
+    result = solve_ivp(
+        fun=rates,
+        t_span=(0, t_max),
+        y0=y0,
+        method='BDF',
+        t_eval=t_eval,
+        events=t_half_event if T_halfway_steady_state is not None else None,
+        args=(params, T_halfway_steady_state,),
+        max_step=max_step,
+        jac=jac_rates
+    )
 
     if not np.all(result.y >= 0):
-        print("Solution contains negative values at some time points. Trying smaller max_step size.")
+        print("Solution contains negative values at some time points. Trying smaller max_step size...")
         max_step = max_step / 2  # halve the max_step
-        return calc_concentrations(t_eval, y0, params, max_step, T_total_baseline, T_total_steady_state)
+        return calc_concentrations(t_eval=t_eval,
+                                   y0=y0, params=params,
+                                   max_step=max_step,
+                                   T_halfway_steady_state=T_halfway_steady_state
+                                   )
 
     return result
 
-def solve_steady_state(initial_guess, params: dict[str, float]):
-    """
-    Solve system steady state, the amounts of species for which all kinetic rates
-    equal 0.
 
-    Args:
-        initial_guess: array; initial guess for solution
-        params: dict; kinetic rate constants and model parameters for rate equations.
+def solve_steady_state(initial_guess: NDArray[float], params: dict[str, float]) -> NDArray[float]:
+    """Solves system steady state.
 
-    Returns:
-        array; amounts of species at steady state
+    Computes the amounts of species at steady state, at which all kinetic rate equations equal 0.
+
+    Parameters
+    ----------
+    initial_guess : NDArray[float]
+        initial guess for steady state solution
+
+    params : dict[str, float]
+        kinetic rate constants and model parameters for rate equations
+
+    Returns
+    -------
+    NDArray[float]
+        species amounts at steady state
     """
-    methods = ['hybr', 'lm']
+    methods: list[str] = ['hybr', 'lm']  # options for `method` arg of scipy.optimize.root()
+
     for m in methods:
         if m == 'hybr':
             # options = {'maxfev': 5000}
@@ -889,14 +943,15 @@ def solve_steady_state(initial_guess, params: dict[str, float]):
             # options = {'xtol': 1.49012e-10, 'ftol': 1.49012e-09, 'maxiter': 10000}
         else:
             options = None
+
         roots = root(
-            kinetic_rates,
-            initial_guess,
-            jac = jac_kinetic_rates,
-            args = (params,),
-            method = m,
-            options = options
-            )
+            fun=kinetic_rates,
+            x0=initial_guess,
+            args=(params,),
+            method=m,
+            jac=jac_kinetic_rates,
+            options=options
+        )
         if roots.success and np.all(roots.x >= 0):
             break
 
@@ -906,132 +961,230 @@ def solve_steady_state(initial_guess, params: dict[str, float]):
 
     return roots.x
 
-def calc_Dmax(t_eval, y0, params, initial_guess = None) -> float:
-    """
-    Calculate Dmax, the maximal percent target protein degradation.
+
+def calc_Dmax(y0: NDArray,
+              params: dict[str, float],
+              initial_guess: Optional[NDArray] = None,
+              t_eval: Optional[ArrayLike] = None) -> float:
+    """Calculates Dmax.
+
+    Calculates the maximal target protein degradation achieved as a percentage of baseline total Target amount.
+
+    Parameters
+    ----------
+    y0 : NDArray
+        initial values of species amounts
+
+    params : dict[str, float]
+        kinetic rate constants and model parameters for rate equations
+
+    initial_guess : Optional[NDArray]
+        initial guess for steady state solution
+
+    t_eval : ArrayLike
+        argument passed to calc_concentrations() if initial_guess is not provided
+
+    Returns
+    -------
+    float
+        percent maximal target protein degradation relative to baseline total Target amount
     """
     if initial_guess is None:
         print("Solving IVP because no initial guess provided.")
-        result = calc_concentrations(t_eval, y0, params, max_step = 0.001)
-        initial_guess = result.y[:,-1]  # system state at final time point
+        result = calc_concentrations(t_eval=t_eval, y0=y0, params=params, max_step=0.001)
+        initial_guess = result.y[:, -1]  # system state at final time point
 
-    steady_state = solve_steady_state(initial_guess, params)
-    T_total_steady_state = np.sum(np.concatenate((steady_state[[2,4]], steady_state[6:])))
-    T_total_baseline = np.sum(np.concatenate((y0[[2,4]], y0[6:])))
-    Dmax = 1 - T_total_steady_state / T_total_baseline
+    steady_state = solve_steady_state(initial_guess=initial_guess, params=params)
+
+    total_target_steady_state = np.sum(np.concatenate((steady_state[[2, 4]], steady_state[6:])))
+    total_target_baseline = np.sum(np.concatenate((y0[[2, 4]], y0[6:])))
+
+    Dmax = 1 - total_target_steady_state / total_target_baseline * 100
     return Dmax
 
-def calc_t_half(t_eval, y0, params):
+
+def calc_t_half(t_eval: ArrayLike, y0: NDArray, params: dict[str, float]) -> float:
+    """Computes the time at which the amount of total Target reaches halfway between baseline and steady state amounts.
+
+    Parameters
+    ----------
+    t_eval : ArrayLike
+        time points within which to search for solution
+
+    y0 : NDArray
+        initial values of species amounts
+
+    params : dict[str, float]
+        kinetic rate constants and model parameters for rate equations
+
+    Returns
+    -------
+    float
+        time at which the amount of total Target reaches halfway between baseline and steady state amounts
     """
-    Find time t at which total amount of Target reaches halfway between baseline and
-    steady state.
-    """
-    result = calc_concentrations(t_eval=t_eval, y0=y0, params=params, max_step = 0.001)
-    init_guess = result.y[:,-1]  # system state at the last time point
-    steady_state = solve_steady_state(initial_guess=init_guess, params=params)
-    T_total_steady_state = np.sum(np.concatenate((steady_state[[2,4]], steady_state[6:])))
-    T_total_baseline = np.sum(np.concatenate((y0[[2,4]], y0[6:])))
+    result = calc_concentrations(t_eval=t_eval, y0=y0, params=params, max_step=0.001)
+    initial_guess = result.y[:, -1]  # system state at the last time point
+
+    steady_state = solve_steady_state(initial_guess=initial_guess, params=params)
+
+    total_target_steady_state: float = np.sum(np.concatenate((steady_state[[2, 4]], steady_state[6:])))
+    total_target_baseline: float = np.sum(np.concatenate((y0[[2, 4]], y0[6:])))
+
+    total_target_halfway: float = np.mean((total_target_baseline, total_target_steady_state))
 
     result_with_events = calc_concentrations(
-        t_eval=t_eval, y0=y0, params=params, max_step = 0.001,
-        T_total_baseline=T_total_baseline, T_total_steady_state=T_total_steady_state
+        t_eval=t_eval,
+        y0=y0, params=params,
+        max_step=0.001,
+        T_halfway_steady_state=total_target_halfway
     )
 
     t_half = result_with_events.t_events[0][0]  # first event type, first time point
     return t_half
 
-def calc_degradation_curve(t_eval, params, initial_BPD_ec_conc=0, initial_BPD_ic_conc=0, return_only_final_state=True):
-        """
-        Calculate target protein degradation and ternary formation
-        for fixed initial degrader concentration at time points t_eval.
 
-        Arguments:
-            t_eval: array_like; time points at which to store computed solution.
-            params: dict; kinetic rate constants and model parameters for rate equations.
-            initial_BPD_ec_conc: float; initial value of BPD_ec concentration.
-            initial_BPD_ic_conc: float; initial value of BPD_ic concentration.
-            return_only_final_state: bool; whether to return only final state of system.
+def calc_degradation_curve(t_eval: ArrayLike,
+                           params: dict[str, float],
+                           initial_BPD_ec_conc: float = 0,
+                           initial_BPD_ic_conc: float = 0,
+                           return_only_final_state: bool = True) -> pd.DataFrame:
+    """Calculates target protein degradation, ternary complex formation, and Dmax.
 
-        Returns:
-            pd.DataFrame; percent degradation and ternary formation relative to baseline Target at time points t_eval.
-        """
-        initial_BPD_ec = initial_BPD_ec_conc * params['Vec']
-        initial_BPD_ic = initial_BPD_ic_conc * params['Vic']
-        y0 = initial_values(params, BPD_ec=initial_BPD_ec, BPD_ic=initial_BPD_ic)
+    Computes the amounts of species in a system over time starting from initial values.
 
-        # solve system of ODEs
-        concentrations = calc_concentrations(t_eval, y0, params, max_step = 0.001)
-        print(concentrations.success)
-        concentrations_df = dataframe_concentrations(concentrations, num_Ub_steps=params['n'])  # rows are time points, columns are species
+    Parameters
+    ----------
+    t_eval : ArrayLike
+        Time points at which to store computed solution.
 
-        # run unit tests
-        run_unit_tests(concentrations_df)
+    params : dict[str, float]
+        Kinetic rate constants and model parameters for rate equations.
 
-        # calculate target protein degradation and ternary complex formation
-        T_total_baseline = np.sum(np.concatenate((y0[[2,4]], y0[6:])))  # float: total amount of Target at baseline
-        T_totals = concentrations_df.filter(regex='.*T.*').sum(axis=1)  # pd.Series: total amounts of Target at time points
-        Ternary_totals = concentrations_df['Ternary']  # pd.Series: amounts of un-ubiquitinated Ternary at time points
-        all_Ternary_totals = concentrations_df.filter(regex='Ternary.*').sum(axis=1)  # pd.Series: total amounts of all Ternary at time points
+    initial_BPD_ec_conc : float
+        Initial value of extracellular BPD concentration.
 
-        relative_T = T_totals / T_total_baseline * 100  # percent total Target relative to baseline Target
-        relative_Ternary = Ternary_totals / T_total_baseline * 100  # percent naked Ternary relative to baseline Target
-        relative_all_Ternary = all_Ternary_totals / T_total_baseline * 100  # percent total Ternary relative to baseline Target
+    initial_BPD_ic_conc : float
+        Initial value of intracellular BPD concentration.
 
-        # calculate Dmax
-        # average_relative_T = (relative_T.min() + relative_T.max()) / 2  # average of min and max Target degradation seen so far
-        # relative_T_index = pd.Index(relative_T)  # index object
-        # # let initial guess for steady state be system near half Target degradation
-        # initial_guess_idx = relative_T_index.get_loc(average_relative_T, method = 'nearest')
-        # x0 = concentrations.y[:, initial_guess_idx]
-        Dmax = calc_Dmax(t_eval, y0, params, initial_guess=concentrations.y[:,-1]) * 100  # float: percent Dmax
+    return_only_final_state : bool
+        Whether to return only final state of system. Default is True.
 
-        result = pd.DataFrame({
-            'initial_BPD_ec_conc': initial_BPD_ec_conc,
-            'initial_BPD_ic_conc': initial_BPD_ic_conc,
-            'degradation': relative_T,
-            'Ternary': relative_Ternary,
-            'all_Ternary': relative_all_Ternary,
-            'Dmax': Dmax
-        })
-        result.insert(0, 't', pd.Series(t_eval))
+    Returns
+    -------
+    pd.DataFrame
+        Solutions at time points.
 
-        if return_only_final_state:
-            return result.iloc[-1:]  # only return system at last time point
+        ===================  ========================
+        t                    time point
+        initial_BPD_ec_conc  initial extracellular BPD concentration
+        initial_BPD_ic_conc  initial intracellular BPD concentration
+        degradation          percent target protein degradation relative to baseline total Target
+        Ternary              percent naked ternary complex formation relative to baseline total Target
+        all_Ternary          percent all ternary complex formation relative to baseline total Target
+        Dmax                 percent maximal target protein degradation relative to baseline total Target
+        ===================  ========================
 
-        return result
-
-"""
-RESULT MANIPULATION AND VISUALIZATION
-"""
-def dataframe_concentrations(solve_ivp_result, num_Ub_steps):
     """
-    Create pandas.DataFrame from object returned by scipy.integrate.solve_ivp()
-    where D[i,j] is amount of species j at time i.
 
-    Args:
-        solve_ivp_result: OptimizeResult; returned by scipy.integrate.solve_ivp().
-        num_Ub_steps: int; number of ubiquitination steps.
+    # initial values
+    initial_BPD_ec: float = initial_BPD_ec_conc * params['Vec']
+    initial_BPD_ic: float = initial_BPD_ic_conc * params['Vic']
+    y0: NDArray[float] = initial_values(params=params, BPD_ec=initial_BPD_ec, BPD_ic=initial_BPD_ic)
+
+    # solve system of ODEs
+    concentrations: sklearn.utils.Bunch
+    concentrations = calc_concentrations(t_eval=t_eval, y0=y0, params=params, max_step=0.001)
+    assert concentrations.success, "Integration by ODE solver failed."
+
+    # format solution
+    concentrations_df: pd.DataFrame
+    concentrations_df = dataframe_concentrations(solve_ivp_result=concentrations, num_Ub_steps=params['n'])
+
+    # run unit tests
+    assert passes_unit_tests(concentrations_df), "One or more unit tests failed."
+
+    # calculate target protein degradation and ternary complex formation
+    total_target_baseline: float = np.sum(np.concatenate((y0[[2, 4]], y0[6:])))  # total amount of Target at baseline
+
+    target_totals_over_time: pd.Series = concentrations_df.filter(regex='.*T.*').sum(axis=1)  # total amounts of Target
+    ternary_totals_over_time: pd.Series = concentrations_df['Ternary']  # amounts of naked Ternary
+    all_ternary_totals_over_time: pd.Series = concentrations_df.filter(regex='Ternary.*').sum(
+        axis=1)  # total amounts of all Ternary
+
+    relative_target: pd.Series = target_totals_over_time / total_target_baseline * 100  # percent total Target relative to baseline Target
+    relative_ternary: pd.Series = ternary_totals_over_time / total_target_baseline * 100  # percent naked Ternary relative to baseline Target
+    relative_all_ternary: pd.Series = all_ternary_totals_over_time / total_target_baseline * 100  # percent total Ternary relative to baseline Target
+
+    # calculate Dmax
+    Dmax: float = calc_Dmax(y0=y0, params=params, initial_guess=concentrations.y[:, -1])
+    # average_relative_T = (relative_T.min() + relative_T.max()) / 2  # average of min and max Target degradation seen so far
+    # relative_T_index = pd.Index(relative_T)  # index object
+    # # let initial guess for steady state be system near half Target degradation
+    # initial_guess_idx = relative_T_index.get_loc(average_relative_T, method = 'nearest')
+    # x0 = concentrations.y[:, initial_guess_idx]
+
+    # create result
+    result = pd.DataFrame({
+        't': pd.Series(t_eval),
+        'initial_BPD_ec_conc': initial_BPD_ec_conc,
+        'initial_BPD_ic_conc': initial_BPD_ic_conc,
+        'degradation': relative_target,
+        'Ternary': relative_ternary,
+        'all_Ternary': relative_all_ternary,
+        'Dmax': Dmax
+    })
+
+    if return_only_final_state:
+        return result.iloc[-1:]  # return system state only at final time point
+
+    return result
+
+
+"""
+SOLUTION FORMATTING AND VISUALIZATION
+"""
+
+
+def dataframe_concentrations(solve_ivp_result: sklearn.utils.Bunch, num_Ub_steps: int) -> pd.DataFrame:
+    """Creates dataframe of species amounts at time points.
+
+    Creates dataframe D from solution returned by calc_concentrations()
+    where columns are species and rows are time points such that D[i,j] is the amount of species j at time i.
+
+    Parameters
+    ----------
+    solve_ivp_result : sklearn.utils.Bunch
+        Solution returned by calc_concentrations().
+
+    num_Ub_steps : int
+        Number of ubiquitination steps.
+
+    Returns
+    -------
+    pd.DataFrame
+        Columns: time and species
+        Rows: species amounts at time points
     """
     result = pd.DataFrame(
-        solve_ivp_result.y.T,
+        data=solve_ivp_result.y.T,
         columns=(
-            [
-                'BPD_ec',
-                'BPD_ic',
-                'T',
-                'E3',
-                'BPD_T',
-                'BPD_E3',
-                'Ternary'
-            ] +
-            ['T_Ub_' + str(i) for i in range(1, num_Ub_steps+1)] +
-            ['BPD_T_Ub_' + str(i) for i in range(1, num_Ub_steps+1)] +
-            ['Ternary_Ub_' + str(i) for i in range(1, num_Ub_steps+1)]
+                [
+                    'BPD_ec',
+                    'BPD_ic',
+                    'T',
+                    'E3',
+                    'BPD_T',
+                    'BPD_E3',
+                    'Ternary'
+                ]
+                + ['T_Ub_' + str(i) for i in range(1, num_Ub_steps + 1)]
+                + ['BPD_T_Ub_' + str(i) for i in range(1, num_Ub_steps + 1)]
+                + ['Ternary_Ub_' + str(i) for i in range(1, num_Ub_steps + 1)]
         )
     )
-
-    result['t'] = solve_ivp_result.t  # add column `t` for time points
+    result.insert(0, 't', solve_ivp_result.t)
     return result
+
 
 def plot_concentrations(df):
     """
@@ -1040,63 +1193,115 @@ def plot_concentrations(df):
     Args:
         df: pandas.DataFrame; returned by dataframe_concentrations().
     """
-    ax = df.plot(x='t',
-                 xlabel='Time (hours)',
-                 ylabel='Amount (uM)',
-                 kind='bar',
-                 stacked=True,
-                 logy=False,
-                 title='Species in target protein degradation',
-                 figsize = (12, 8),
-                 fontsize = 20
-                 )
+    ax = df.plot(
+        x='t',
+        xlabel='Time (hours)',
+        ylabel='Amount (uM)',
+        kind='bar',
+        stacked=True,
+        logy=False,
+        title='Species in target protein degradation',
+        figsize=(12, 8),
+        fontsize=20
+    )
     plt.legend(bbox_to_anchor=(1.0, 1.0))
     plt.show()
+
 
 """
 UNIT TESTING
 """
 
 
-def test_total_species(df, regex):
-    totals = df.filter(regex=regex).sum(axis=1)  # pd.Series: total amounts at time points
-    baseline = totals.iloc[0]
-    is_success = np.allclose(totals, baseline, rtol=0.01)
+def test_total_species(df: pd.DataFrame, regex: str) -> bool:
+    """Tests consistency of subset of species over time.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Species amounts where columns are species and rows are time points.
+
+    regex : str
+        Regular expression for selecting columns.
+
+    Returns
+    -------
+    bool
+        Whether amount of subset of species is consistent over time.
+    """
+    totals: pd.Series[float] = df.filter(regex=regex).sum(axis=1)  # total amounts at time points
+    baseline: float = totals.iloc[0]
+    is_success: bool = np.allclose(totals, baseline, rtol=0.01)
     if not is_success:
         print(totals)
 
     return is_success
 
 
-def test_total_BPD(df):
-    """
-    Total BPD amount should remain constant over time without in vivo PK dynamics.
+def test_total_BPD(df: pd.DataFrame) -> bool:
+    """Tests consistency of total BPD.
+
+    Total BPD amount should remain consistent over time without pharmacokinetics.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Species amounts where columns are species and rows are time points.
+
+    Returns
+    -------
+    bool
+        Whether amount of total BPD is consistent over time.
     """
     return test_total_species(df, regex='.*BPD.*')
 
 
-def test_total_E3(df):
-    """
-    Total E3 amount should remain constant over time.
+def test_total_E3(df) -> bool:
+    """Tests consistency of total E3.
+
+    Total E3 amount should remain consistent over time.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Species amounts where columns are species and rows are time points.
+
+    Returns
+    -------
+    bool
+        Whether amount of total E3 is consistent over time.
     """
     return test_total_species(df, regex='.*E3.*')
 
 
-def test_all_nonnegative(df):
-    pass
+def passes_unit_tests(df: pd.DataFrame) -> bool:
+    """Performs unit tests on model solution.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Species amounts where columns are species and rows are time points.
 
 
-def run_unit_tests(df):
-    all_tests_passed = True
+    Returns
+    -------
+    bool
+        Whether model solution passes all unit tests.
+    """
+    test_results: set[str] = set()
+
     if not test_total_BPD(df):
-        print("BPD test failed.")
-        all_tests_passed = False
+        test_results.add("BPD test failed.")
     if not test_total_E3(df):
-        print("E3 test failed.")
-        all_tests_passed = False
+        test_results.add("E3 test failed.")
 
-    if all_tests_passed:
+    if not test_results:
+        # if test_results is empty, no tests failed
         print("All unit tests passed.")
+    else:
+        print(*test_results, sep='\n')
+
+    return not test_results
 
 
 def test_degradation_rate():
