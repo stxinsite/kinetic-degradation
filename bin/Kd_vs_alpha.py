@@ -24,4 +24,4 @@ if __name__ == '__main__':
         kd_T_binary_range=kd_T_binary_range,
         initial_BPD_ec_conc=initial_BPD_ec_conc
     )
-    result.to_csv(f"./saved_objects/{test_id}_kd_T_binary_vs_alpha_DEG.csv")  # save dataframe
+    result.to_csv(f"./saved_objects/{test_id}_kd_T_binary_vs_alpha_DEG.csv", index=False)  # save dataframe
