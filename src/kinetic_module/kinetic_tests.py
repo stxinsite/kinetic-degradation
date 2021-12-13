@@ -197,7 +197,47 @@ def kd_T_binary_vs_alpha(config_filename: str,
         (t_eval, this_params, initial_BPD_ec_conc, initial_BPD_ic_conc, True, protac_id)
         for this_params in new_params
     ]
-    print(inputs)
+    outputs = pool.starmap(solve_target_degradation, inputs)
+    pool.close()
+    pool.join()
+
+    result = pd.concat(outputs)
+    return result
+
+
+def kub_vs_alpha(config_filename: str,
+                 protac_id: str,
+                 t_eval: ArrayLike,
+                 alpha_range,
+                 kub_range,
+                 initial_BPD_ec_conc=None,
+                 initial_BPD_ic_conc=None,):
+    keys_to_update = [
+        'koff_T_binary',
+        'koff_T_ternary',
+        'koff_E3_binary',
+        'koff_E3_ternary',
+        'Kd_T_ternary',
+        'Kd_E3_ternary'
+    ]
+    params = get_params_from_config(config_filename=config_filename)
+    params = set_keys_to_none(params, keys=keys_to_update)
+    params_range = [
+        (kub, alpha)
+        for kub in kub_range
+        for alpha in alpha_range
+    ]
+    params_copies = [params.copy() for _ in params_range]
+    new_params = [
+        update_params(params_copy, ['kub', 'alpha'], new_params)
+        for params_copy, new_params in zip(params_copies, params_range)
+    ]
+
+    pool = Pool(processes=cpu_count())
+    inputs = [
+        (t_eval, this_params, initial_BPD_ec_conc, initial_BPD_ic_conc, True, protac_id)
+        for this_params in new_params
+    ]
     outputs = pool.starmap(solve_target_degradation, inputs)
     pool.close()
     pool.join()
