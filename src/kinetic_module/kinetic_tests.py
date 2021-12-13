@@ -1,29 +1,26 @@
 """
-This module contains functions used to calculate target protein degradation, ternary complex formation, and Dmax for
-various configurations of model parameters and initial values.
+This module contains functions used to run a kinetic proofreading model of target protein degradation
+using configuration(s) of model parameters and initial values.
 """
-
 from typing import Iterable, Union, Optional
+from multiprocessing import Pool, cpu_count
+
 import yaml
 import numpy as np
 from numpy.typing import ArrayLike
 import pandas as pd
 import matplotlib.pyplot as plt
-from multiprocessing import Pool, cpu_count
+
 # from ray.util.multiprocessing import Pool
 import kinetic_module.kinetic_functions as kf
 from kinetic_module.calc_full_config import KineticParameters
+
 plt.rcParams["axes.labelsize"] = 20
 plt.rcParams["axes.titlesize"] = 20
 plt.rcParams["figure.figsize"] = (12,8)
 
 """
 To do:
-- allow calc_degradation_curve() to set initial BPD_ic
-    - this would allow for entirely intracellular systems
-- parallelize solve_target_degradation().
-    - since each element in inputs is independent, calc_degradation_curve()
-      can be called in parallel
 - solve_target_degradation() does same function as degradation_vary_BPD_time(),
   but shape of output is different
     - allow conversion of long pd.DataFrame to grid
@@ -36,39 +33,55 @@ To do:
 
 def solve_target_degradation(t_eval: Union[ArrayLike, float, int],
                              params: dict[str, float],
-                             initial_BPD_ec_concs: Optional[Union[Iterable, float]] = None,
-                             initial_BPD_ic_concs: Optional[Union[Iterable, float]] = None,
+                             initial_BPD_ec_concs: Optional[Union[ArrayLike, float, int]] = None,
+                             initial_BPD_ic_concs: Optional[Union[ArrayLike, float, int]] = None,
                              return_only_final_state: bool = False,
                              PROTAC_ID: Optional[str] = None) -> pd.DataFrame:
-    """Calculates target protein degradation, ternary complex formation, and Dmax
-    for possible various initial concentrations of degrader over a range of time points.
+    """Calculates target protein degradation, ternary complex formation, and Dmax over time
+    for initial concentration(s) of degrader.
 
     Parameters
     ----------
-    t_eval : ArrayLike
-        time points at which to store computed solution
+    t_eval : Union[ArrayLike, float, int]
+        Time points at which to store computed solution.
 
     params : dict[str, float]
-        kinetic rate constants and model parameters for rate equations
+        Kinetic rate constants and model parameters for rate equations.
 
-    initial_BPD_ec_concs : Optional[Iterable]
-        initial value(s) of BPD_ec concentration
+    initial_BPD_ec_concs : Optional[Union[ArrayLike, float, int]]
+        Initial value(s) of BPD_ec concentration.
 
-    initial_BPD_ic_concs : Optional[Iterable]
-        initial value(s) of BPD_ic concentration
+    initial_BPD_ic_concs : Optional[Union[ArrayLike, float, int]]
+        Initial value(s) of BPD_ic concentration.
 
     return_only_final_state : bool
-        whether to return only final state of system
+        Whether to return only final state of system.
 
     PROTAC_ID : Optional[str]
-        PROTAC identifier
+        PROTAC identifier.
 
     Returns
     -------
     pd.DataFrame
-        percent degradation, ternary formation relative to baseline total Target amount and
-        percent Dmax for all initial concentrations of degrader over a range of time points
+        Solutions at time points and initial configurations.
+
+        ===================  ============================================================================
+        t                    time point
+        initial_BPD_ec_conc  initial extracellular BPD concentration
+        initial_BPD_ic_conc  initial intracellular BPD concentration
+        degradation          percent target protein degradation relative to baseline total Target
+        Ternary              percent naked ternary complex formation relative to baseline total Target
+        all_Ternary          percent all ternary complex formation relative to baseline total Target
+        Dmax                 percent maximal target protein degradation relative to baseline total Target
+        PROTAC_ID            PROTAC identifier
+        Kd_T_binary          equilibrium dissociation constant of BPD-T binary complex
+        kon_T_binary         kon of BPD + T -> BPD-T
+        kub                  ternary complex ubiquitination rate
+        alpha                cooperativity
+        ===================  ============================================================================
+
     """
+
     if isinstance(t_eval, float) or isinstance(t_eval, int):
         t_eval = np.linspace(start=0, stop=t_eval)
     if isinstance(initial_BPD_ec_concs, float) or isinstance(initial_BPD_ec_concs, int):
@@ -77,7 +90,7 @@ def solve_target_degradation(t_eval: Union[ArrayLike, float, int],
         initial_BPD_ic_concs = np.array([initial_BPD_ic_concs])
 
     if initial_BPD_ec_concs is None and initial_BPD_ic_concs is None:
-        print('No initial concentrations of degrader were provided.')
+        print('No initial concentration(s) of degrader were provided.')
         return None
     elif initial_BPD_ec_concs is not None and initial_BPD_ic_concs is None:
         initial_BPD_ic_concs = np.zeros(len(initial_BPD_ec_concs))
@@ -90,6 +103,7 @@ def solve_target_degradation(t_eval: Union[ArrayLike, float, int],
         (t_eval, params, initial_BPD_ec, initial_BPD_ic, return_only_final_state)
         for (initial_BPD_ec, initial_BPD_ic) in zip(initial_BPD_ec_concs, initial_BPD_ic_concs)
     ]
+    outputs: list[pd.DataFrame]
 
     if len(inputs) > 1:
         pool = Pool(processes=cpu_count())
@@ -111,12 +125,12 @@ def solve_target_degradation(t_eval: Union[ArrayLike, float, int],
 
 def run_kinetic_model(config_files: list[str],
                       protac_IDs: list[str],
-                      t_eval: ArrayLike = np.linspace(0, 1),
-                      initial_BPD_ec_concs: Optional[Iterable] = None,
-                      initial_BPD_ic_concs: Optional[Iterable] = None,
+                      t_eval: Union[ArrayLike, float, int] = np.linspace(0, 1),
+                      initial_BPD_ec_concs: Optional[Union[ArrayLike, float, int]] = None,
+                      initial_BPD_ic_concs: Optional[Union[ArrayLike, float, int]] = None,
                       return_only_final_state: bool = False) -> pd.DataFrame:
-    """Runs kinetic model for each pair of initial extracellular and
-    intracellular degrader concentrations for each config and PROTAC provided.
+    """Runs kinetic model for each pair of initial concentrations of extracellular and
+    intracellular degrader for each configuration and PROTAC provided.
 
     Parameters
     ----------
@@ -126,13 +140,13 @@ def run_kinetic_model(config_files: list[str],
     protac_IDs : list[str]
         PROTAC identifiers
 
-    t_eval : ArrayLike
+    t_eval : Union[ArrayLike, float, int]
         time points at which to store state of system
 
-    initial_BPD_ec_concs : Optional[Iterable]
+    initial_BPD_ec_concs : Optional[Union[ArrayLike, float, int]]
         initial concentration(s) of extracellular degrader
 
-    initial_BPD_ic_concs : Optional[Iterable]
+    initial_BPD_ic_concs : Optional[Union[ArrayLike, float, int]]
         initial concentration(s) of intracellular degrader
 
     return_only_final_state : bool
@@ -141,7 +155,7 @@ def run_kinetic_model(config_files: list[str],
     Returns
     -------
     pd.DataFrame
-        degradation, ternary complex formation, and Dmax for each time point and initial degrader concentration
+        result returned by solve_target_degradation() for each configuration and initial concentration(s).
     """
     outputs: list[pd.DataFrame] = []
 
@@ -156,7 +170,6 @@ def run_kinetic_model(config_files: list[str],
             return_only_final_state=return_only_final_state,
             PROTAC_ID=protac
         )
-
         outputs.append(df)
 
     result: pd.DataFrame = pd.concat(outputs, ignore_index=True)
@@ -165,12 +178,44 @@ def run_kinetic_model(config_files: list[str],
 
 def kd_T_binary_vs_alpha(config_filename: str,
                          protac_id: str,
-                         t_eval: ArrayLike,
-                         alpha_range,
-                         kd_T_binary_range,
-                         initial_BPD_ec_conc=None,
-                         initial_BPD_ic_conc=None,
-                         ):
+                         t_eval: Union[ArrayLike, float, int],
+                         alpha_range: ArrayLike,
+                         kd_T_binary_range: ArrayLike,
+                         initial_BPD_ec_conc: float = None,
+                         initial_BPD_ic_conc: float = None,
+                         ) -> pd.DataFrame:
+    """Runs kinetic proofreading model for combinations of alpha and Kd_T_binary.
+
+    Parameters
+    ----------
+    config_filename : str
+        Config filename.
+
+    protac_id : str
+        PROTAC identifier.
+
+    t_eval : Union[ArrayLike, float, int]
+        Time points at which to store compute solution.
+
+    alpha_range : ArrayLike
+        Range of cooperativity values.
+
+    kd_T_binary_range
+        Range of Kd_T_binary values.
+
+    initial_BPD_ec_conc
+        Initial concentration of extracellular BPD.
+
+    initial_BPD_ic_conc
+        Initial concentration of intracellular BPD.
+
+    Returns
+    -------
+    pd.DataFrame
+        result returned by solve_target_degradation() for each (Kd_T_binary, alpha) and initial concentrations.
+    """
+
+    # these parameters will be set to None in order to be calculated and updated by KineticParameters()
     keys_to_update = [
         'koff_T_binary',
         'koff_T_ternary',
@@ -178,18 +223,21 @@ def kd_T_binary_vs_alpha(config_filename: str,
         'Kd_T_ternary',
         'Kd_E3_ternary'
     ]
+
     params = get_params_from_config(config_filename=config_filename)
     params = set_keys_to_none(params, keys=keys_to_update)
 
+    # combinations of alpha and Kd_T_binary
     params_range = [
         (kd, alpha)
         for kd in kd_T_binary_range
         for alpha in alpha_range
     ]
+
     params_copies = [params.copy() for _ in params_range]
     new_params = [
-        update_params(params_copy, ['Kd_T_binary', 'alpha'], new_params)
-        for params_copy, new_params in zip(params_copies, params_range)
+        update_params(params_copy, keys=['Kd_T_binary', 'alpha'], values=new_values)
+        for params_copy, new_values in zip(params_copies, params_range)
     ]
 
     pool = Pool(processes=cpu_count())
@@ -197,21 +245,53 @@ def kd_T_binary_vs_alpha(config_filename: str,
         (t_eval, this_params, initial_BPD_ec_conc, initial_BPD_ic_conc, True, protac_id)
         for this_params in new_params
     ]
-    outputs = pool.starmap(solve_target_degradation, inputs)
+    outputs: list[pd.DataFrame] = pool.starmap(solve_target_degradation, inputs)
     pool.close()
     pool.join()
 
-    result = pd.concat(outputs)
+    result: pd.DataFrame = pd.concat(outputs)
     return result
 
 
 def kub_vs_alpha(config_filename: str,
                  protac_id: str,
-                 t_eval: ArrayLike,
-                 alpha_range,
-                 kub_range,
-                 initial_BPD_ec_conc=None,
-                 initial_BPD_ic_conc=None,):
+                 t_eval: Union[ArrayLike, float, int],
+                 alpha_range: ArrayLike,
+                 kub_range: ArrayLike,
+                 initial_BPD_ec_conc: float = None,
+                 initial_BPD_ic_conc: float = None) -> pd.DataFrame:
+    """Runs kinetic proofreading model for combinations of alpha and kub.
+
+    Parameters
+    ----------
+    config_filename : str
+        Config filename.
+
+    protac_id : str
+        PROTAC identifier.
+
+    t_eval : Union[ArrayLike, float, int]
+        Time points at which to store compute solution.
+
+    alpha_range : ArrayLike
+        Range of cooperativity values.
+
+    kub_range
+        Range of kub values.
+
+    initial_BPD_ec_conc
+        Initial concentration of extracellular BPD.
+
+    initial_BPD_ic_conc
+        Initial concentration of intracellular BPD.
+
+    Returns
+    -------
+    pd.DataFrame
+        result returned by solve_target_degradation() for each (kub, alpha) and initial concentrations.
+    """
+
+    # these parameters will be set to None in order to be calculated and updated by KineticParameters()
     keys_to_update = [
         'koff_T_binary',
         'koff_T_ternary',
@@ -220,17 +300,21 @@ def kub_vs_alpha(config_filename: str,
         'Kd_T_ternary',
         'Kd_E3_ternary'
     ]
+
     params = get_params_from_config(config_filename=config_filename)
     params = set_keys_to_none(params, keys=keys_to_update)
+
+    # combinations of kub and alpha
     params_range = [
         (kub, alpha)
         for kub in kub_range
         for alpha in alpha_range
     ]
+
     params_copies = [params.copy() for _ in params_range]
     new_params = [
-        update_params(params_copy, ['kub', 'alpha'], new_params)
-        for params_copy, new_params in zip(params_copies, params_range)
+        update_params(params_copy, keys=['kub', 'alpha'], values=new_values)
+        for params_copy, new_values in zip(params_copies, params_range)
     ]
 
     pool = Pool(processes=cpu_count())
@@ -238,15 +322,27 @@ def kub_vs_alpha(config_filename: str,
         (t_eval, this_params, initial_BPD_ec_conc, initial_BPD_ic_conc, True, protac_id)
         for this_params in new_params
     ]
-    outputs = pool.starmap(solve_target_degradation, inputs)
+    outputs: list[pd.DataFrame] = pool.starmap(solve_target_degradation, inputs)
     pool.close()
     pool.join()
 
-    result = pd.concat(outputs)
+    result: pd.DataFrame = pd.concat(outputs)
     return result
 
 
-def get_params_from_dict(params_dict) -> Optional[dict[str, float]]:
+def get_params_from_dict(params_dict: dict[str, float]) -> Optional[dict[str, float]]:
+    """Returns valid dictionary of parameters if possible.
+
+    Parameters
+    ----------
+    params_dict : dict[str, float]
+        Kinetic rate constants and model parameters for rate equations.
+
+    Returns
+    -------
+    Optional[dict[str, float]]
+        A fully defined parameters dictionary if `params_dict` is sufficient and consistent. Otherwise, None.
+    """
     params = KineticParameters(params_dict)
     if params.is_fully_defined():
         return params.params
@@ -254,7 +350,25 @@ def get_params_from_dict(params_dict) -> Optional[dict[str, float]]:
         return None
 
 
-def get_params_from_config(config_filename: str) -> dict[str, float]:
+def get_params_from_config(config_filename: str) -> Optional[dict[str, float]]:
+    """Reads a config of model parameters and returns a dictionary.
+
+    Parameters
+    ----------
+    config_filename : str
+        Path to config file.
+
+    Returns
+    -------
+    Optional[dict[str, float]]
+        A fully defined dictionary of kinetic rate constants and model parameters for rate equations.
+
+    Raises
+    ------
+    ValueError
+        If config is insufficient or inconsistent.
+    """
+
     # this will probably break if cwd is not kinetic-degradation
     with open(file=f'./data/{config_filename}', mode='r') as file:
         config_dict: dict = yaml.safe_load(file)
@@ -266,14 +380,48 @@ def get_params_from_config(config_filename: str) -> dict[str, float]:
         return params
 
 
-def set_keys_to_none(a_dict, keys):
+def set_keys_to_none(a_dict: dict, keys: Iterable) -> dict:
+    """Sets keys in dictionary to None.
+
+    Parameters
+    ----------
+    a_dict : dict
+        A dictionary containing all keys in `keys`.
+
+    keys : Iterable
+        Keys in dictionary whose corresponding values to set to None.
+
+    Returns
+    -------
+    dict
+        Dictionary with values corresponding to all keys in `keys` set to None.
+    """
     for key in keys:
         a_dict[key] = None
 
     return a_dict
 
 
-def update_params(params, keys, values):
+def update_params(params: dict[str, float], keys: Iterable[str], values: Iterable[float]) -> Optional[dict[str, float]]:
+    """Updates a dictionary of kinetic rate constants and model parameters.
+
+    Parameters
+    ----------
+    params : dict[str, float]
+        A dictionary of parameters to update.
+
+    keys : Iterable[str]
+        Keys to set.
+
+    values : Iterable[float]
+        Values to set.
+
+    Returns
+    -------
+    Optional[dict[str, float]]
+        A fully defined parameters dictionary if `params` is sufficient and consistent
+        updated after setting new parameter values. Otherwise, None.
+    """
     assert len(keys) == len(values), "Length of keys to update in params must equal length of values."
     for key, val in zip(keys, values):
         params[key] = val
