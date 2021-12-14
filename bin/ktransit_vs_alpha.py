@@ -10,14 +10,14 @@ if __name__ == '__main__':
     config_filename = 'SiTX_38406_config.yml'
     protac_id = 'ACBI1'
 
-    t_eval = 1  # time point at which to calculate
+    t_eval = 6  # time point at which to calculate
 
     test_id = protac_id.replace(" ", "") + f"t={t_eval}"
 
-    alpha_range = np.geomspace(start=0.1, stop=1e8, num=50)  # geometric range of alpha values
-    kub_range = np.power(10, np.arange(0, 8, step=2, dtype=float))  # range of Kd_T_binary values
+    alpha_range = np.geomspace(start=0.1, stop=1000, num=50)  # geometric range of alpha values
+    kub_range = np.array([10, 100, 500, 1000])  # range of kub values
 
-    initial_BPD_ec_conc = 0.1  # initial concentrations of BPD_ec (uM)
+    initial_BPD_ec_conc = 0.0005  # initial concentrations of BPD_ec (uM)
 
     result = kt.kub_vs_alpha(
         config_filename=config_filename,
