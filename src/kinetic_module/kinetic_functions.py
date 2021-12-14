@@ -903,7 +903,7 @@ def calc_concentrations(t_eval: ArrayLike,
     )
 
     if not np.all(result.y >= 0):
-        print("Solution contains negative values at some time points. Trying smaller max_step size...")
+        print("scipy.integrate.solve_ivp() produces negative solutions. Trying smaller max_step size...")
         max_step = max_step / 2  # halve the max_step
         return calc_concentrations(t_eval=t_eval,
                                    y0=y0, params=params,
@@ -956,7 +956,7 @@ def solve_steady_state(initial_guess: NDArray[float], params: dict[str, float]) 
             break
 
     if (not roots.success) or np.any(roots.x < 0):
-        print(roots.message)
+        print("scipy.optimize.root() message: " + roots.message)
         # return None
 
     return roots.x
@@ -1108,8 +1108,7 @@ def calc_degradation_curve(t_eval: ArrayLike,
 
     target_totals_over_time: pd.Series = concentrations_df.filter(regex='.*T.*').sum(axis=1)  # total amounts of Target
     ternary_totals_over_time: pd.Series = concentrations_df['Ternary']  # amounts of naked Ternary
-    all_ternary_totals_over_time: pd.Series = concentrations_df.filter(regex='Ternary.*').sum(
-        axis=1)  # total amounts of all Ternary
+    all_ternary_totals_over_time: pd.Series = concentrations_df.filter(regex='Ternary.*').sum(axis=1)  # total amounts of all Ternary
 
     relative_target: pd.Series = target_totals_over_time / total_target_baseline * 100  # percent total Target relative to baseline Target
     relative_ternary: pd.Series = ternary_totals_over_time / total_target_baseline * 100  # percent naked Ternary relative to baseline Target
@@ -1123,6 +1122,10 @@ def calc_degradation_curve(t_eval: ArrayLike,
     # initial_guess_idx = relative_T_index.get_loc(average_relative_T, method = 'nearest')
     # x0 = concentrations.y[:, initial_guess_idx]
 
+    # calculate total intracellular species amounts
+    bpd_totals_over_time: pd.Series = concentrations_df.filter(regex='^(?!BPD_ec).*BPD.*').sum(axis=1)
+    t_ub_totals_over_time: pd.Series = concentrations_df.filter(regex='.*T_Ub.*').sum(axis=1)  # total ubiquitinated Target
+
     # create result
     result = pd.DataFrame({
         't': pd.Series(t_eval),
@@ -1131,7 +1134,12 @@ def calc_degradation_curve(t_eval: ArrayLike,
         'degradation': relative_target,
         'Ternary': relative_ternary,
         'all_Ternary': relative_all_ternary,
-        'Dmax': Dmax
+        'Dmax': Dmax,
+        'total_target': target_totals_over_time,
+        'total_target_ub': t_ub_totals_over_time,
+        'total_naked_ternary': ternary_totals_over_time,
+        'total_ternary': all_ternary_totals_over_time,
+        'total_bpd_ic': bpd_totals_over_time
     })
 
     if return_only_final_state:
