@@ -611,6 +611,8 @@ def jac_kinetic_rates(y: NDArray[np.float64], params: dict[str, float]) -> NDArr
     T_Ubs, BPD_T_Ubs, Ternary_Ubs = Ub_species[0], Ub_species[1], Ub_species[2]
 
     n_Ub_species = len(y[7:])
+    # n_T_Ubs = n_BPD_T_Ubs = n_Ternary_Ubs
+    # variable names may help explain indices of Jacobian values
     n_T_Ubs = len(T_Ubs)
     n_BPD_T_Ubs = len(BPD_T_Ubs)
     n_Ternary_Ubs = len(Ternary_Ubs)
@@ -733,8 +735,7 @@ def jac_kinetic_rates(y: NDArray[np.float64], params: dict[str, float]) -> NDArr
             dBPD_T_Ubdtdy = [0] * (7 + n_Ub_species)
             dTernary_Ub_idtdy = [0] * (7 + n_Ub_species)
 
-            dT_Ubdtdy[1] = - params['kon_T_binary'] * params['fu_ic'] * T_Ubs[i] / params[
-                'Vic']  # (dT.Ubi/dt) / dBPD_ic
+            dT_Ubdtdy[1] = - params['kon_T_binary'] * params['fu_ic'] * T_Ubs[i] / params['Vic']  # (dT.Ubi/dt) / dBPD_ic
             dT_Ubdtdy[5] = - params['kon_T_ternary'] * T_Ubs[i] / params['Vic']  # (dT.Ubi/dt) / dBPD_E3
             dT_Ubdtdy[7 + i] = (
                     - (params['kde_ub'] + params['kdeg_T'])
@@ -744,14 +745,13 @@ def jac_kinetic_rates(y: NDArray[np.float64], params: dict[str, float]) -> NDArr
             )  # (dT.Ubi/dt) / dT.Ubi
             if i < (n_T_Ubs - 1):
                 dT_Ubdtdy[7 + i + 1] = params['kde_ub']  # (dT.Ubi/dt) / dT.Ub<i+1>
+
             dT_Ubdtdy[7 + n_T_Ubs + i] = params['koff_T_binary']  # (dT.Ubi/dt) / dBPD.T.Ubi
             dT_Ubdtdy[7 + n_T_Ubs + n_BPD_T_Ubs + i] = params['koff_T_ternary']  # (dT.Ubi/dt) / dTernary.Ubi
 
-            dBPD_T_Ubdtdy[1] = params['kon_T_binary'] * params['fu_ic'] * T_Ubs[i] / params[
-                'Vic']  # (dBPD.T.Ubi/dt) / dBPD_ic
+            dBPD_T_Ubdtdy[1] = params['kon_T_binary'] * params['fu_ic'] * T_Ubs[i] / params['Vic']  # (dBPD.T.Ubi/dt) / dBPD_ic
             dBPD_T_Ubdtdy[3] = - params['kon_E3_ternary'] * BPD_T_Ubs[i] / params['Vic']  # (dBPD.T.Ubi/dt) / dE3
-            dBPD_T_Ubdtdy[7 + i] = params['kon_T_binary'] * params['fu_ic'] * BPD_ic / params[
-                'Vic']  # (dBPD.T.Ubi/dt) / dT.Ubi
+            dBPD_T_Ubdtdy[7 + i] = params['kon_T_binary'] * params['fu_ic'] * BPD_ic / params['Vic']  # (dBPD.T.Ubi/dt) / dT.Ubi
             dBPD_T_Ubdtdy[7 + n_T_Ubs + i] = (
                     - (params['kde_ub'] + params['kdeg_T'])
                     - params['koff_T_binary']
@@ -760,18 +760,18 @@ def jac_kinetic_rates(y: NDArray[np.float64], params: dict[str, float]) -> NDArr
             )  # (dBPD.T.Ubi/dt) / dBPD.T.Ubi
             if i < (n_BPD_T_Ubs - 1):
                 dBPD_T_Ubdtdy[7 + n_T_Ubs + i + 1] = params['kde_ub']  # (dBPD.T.Ubi/dt) / dBPD.T.Ub<i+1>
+
             dBPD_T_Ubdtdy[7 + n_T_Ubs + n_BPD_T_Ubs + i] = params['koff_E3_ternary']  # (dBPD.T.Ubi/dt) / dTernary.Ubi
 
             dTernary_Ub_idtdy[3] = params['kon_E3_ternary'] * BPD_T_Ubs[i] / params['Vic']  # (dTernary.Ubi/dt) / dE3
             dTernary_Ub_idtdy[5] = params['kon_T_ternary'] * T_Ubs[i] / params['Vic']  # (dTernary.Ubi/dt) / dBPD.E3
             dTernary_Ub_idtdy[7 + i] = params['kon_T_ternary'] * BPD_E3 / params['Vic']  # (dTernary.Ubi/dt) / dT.Ubi
-            dTernary_Ub_idtdy[7 + n_T_Ubs + i] = params['kon_E3_ternary'] * E3 / params[
-                'Vic']  # (dTernary.Ubi/dt) / dBPD.T.Ubi
+            dTernary_Ub_idtdy[7 + n_T_Ubs + i] = params['kon_E3_ternary'] * E3 / params['Vic']  # (dTernary.Ubi/dt) / dBPD.T.Ubi
             if i == 0:
                 dTernary_Ub_idtdy[6] = params['kub']
             else:
-                dTernary_Ub_idtdy[7 + n_T_Ubs + n_BPD_T_Ubs + i - 1] = params[
-                    'kub']  # (dTernary_Ub_i/dt) / dTernary_Ub_<i-1>
+                dTernary_Ub_idtdy[7 + n_T_Ubs + n_BPD_T_Ubs + i - 1] = params['kub']  # (dTernary_Ub_i/dt) / dTernary_Ub_<i-1>
+
             dTernary_Ub_idtdy[7 + n_T_Ubs + n_BPD_T_Ubs + i] = (
                     - (params['kdeg_T'] + params['koff_T_ternary'] + params['koff_E3_ternary'])
                     - (0 if i == (n_Ternary_Ubs - 1) else params['kub'])
@@ -999,7 +999,7 @@ def calc_Dmax(y0: NDArray,
     total_target_steady_state = np.sum(np.concatenate((steady_state[[2, 4]], steady_state[6:])))
     total_target_baseline = np.sum(np.concatenate((y0[[2, 4]], y0[6:])))
 
-    Dmax = 1 - total_target_steady_state / total_target_baseline * 100
+    Dmax = (1 - total_target_steady_state / total_target_baseline) * 100
     return Dmax
 
 
