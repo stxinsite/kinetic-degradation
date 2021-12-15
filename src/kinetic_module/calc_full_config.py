@@ -17,8 +17,8 @@ class KineticParameters(object):
     cooperativity_expr : list[tuple[str, str, str, int]]]
         expressions relating binding affinities and cooperativity to each other
     expression_list : list[tuple[str, str, str, int]]]
-        a list of tuples (LHS_key, RHS_key1, RHS_key2, power) where
-        LHS_key = RHS_key1 * (RHS_key2 ** power)
+        a list of tuples (lhs_key, rhs_key1, rhs_key2, pwr) where
+        lhs_key = rhs_key1 * (rhs_key2 ** pwr)
     _params : dict[str, float]
         kinetic rate constants and model parameters for rate equations
     warning_messages: set[str]
@@ -84,17 +84,25 @@ class KineticParameters(object):
         Parameters
         ----------
         direction: Literal[1, -1]
-            traverse forward (1) or backward (-1) through expression_list
+            Traverse forward (1) or backward (-1) through parameters.
         """
 
-        for LHS_key, RHS_key1, RHS_key2, power in self.expression_list[::direction]:
-            value: Optional[float] = self._params[LHS_key]
+        for lhs_key, rhs_key1, rhs_key2, pwr in self.expression_list[::direction]:
+            value: Optional[float]
             proposed_value: Optional[float]
 
-            if self._params[RHS_key1] and self._params[RHS_key2]:
-                # both right-hand side values are not None
-                proposed_value = self._params[RHS_key1] * (self._params[RHS_key2] ** power)
-            else:
+            try:
+                self._params[lhs_key]
+            except KeyError:
+                print(f"{lhs_key} was not provided")
+            finally:
+                value = self._params.setdefault(lhs_key)
+
+            rhs_value1 = self._params.get(rhs_key1)
+            rhs_value2 = self._params.get(rhs_key2)
+            try:
+                proposed_value = rhs_value1 * (rhs_value2 ** pwr)
+            except TypeError:
                 proposed_value = None
 
             if proposed_value:
@@ -102,11 +110,11 @@ class KineticParameters(object):
                     # if left-hand side key already has value, check consistency with proposed value
                     if not np.isclose(value, proposed_value, rtol = 0.05):
                         self.warning_messages.add(
-                            f"{LHS_key} = {value} is inconsistent with {RHS_key1} {'*' if power == 1 else '/'} {RHS_key2} = {proposed_value}"
+                            f"{lhs_key} = {value} is inconsistent with {rhs_key1} {'*' if pwr == 1 else '/'} {rhs_key2} = {proposed_value}"
                         )
                 else:
                     # if left-hand side value is None, update with proposed value
-                    self._params[LHS_key] = proposed_value
+                    self._params[lhs_key] = proposed_value
 
     def forward_pass(self) -> None:
         """Checks or calculates parameters in forward direction.
@@ -122,9 +130,9 @@ class KineticParameters(object):
         """Checks whether all parameters are known and consistent.
         """
         # check for any values left None
-        for LHS_key, RHS_key1, RHS_key2, power in self.expression_list:
-            if self._params[LHS_key] is None:
-                self.warning_messages.add(f"{LHS_key} is undefined")
+        for lhs_key, rhs_key1, rhs_key2, pwr in self.expression_list:
+            if self._params[lhs_key] is None:
+                self.warning_messages.add(f"{lhs_key} is undefined")
 
         if len(self.warning_messages):
             # check for any warning messages
