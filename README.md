@@ -134,6 +134,8 @@ export PYTHONPATH="$(pwd)/src/"
 set PYTHONPATH=%cd%\src\;%PYTHONPATH%
 ```
 
+In your current working directory, create a folder named `saved_objects/`; this is where results will be stored.
+
 ## Example 
 ```commandline
 python bin/run_kinetic_model.py
