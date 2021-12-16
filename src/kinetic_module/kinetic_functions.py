@@ -833,7 +833,7 @@ def calc_concentrations(t_eval: ArrayLike,
                         y0: NDArray[float],
                         params: dict[str, float],
                         max_step: float = np.inf,
-                        T_halfway_steady_state: float = None) -> sklearn.utils.Bunch:
+                        half_maximal_target: Optional[float] = None) -> sklearn.utils.Bunch:
     """Solves the initial value problem for target protein degradation.
 
     Computes the amounts of species in the system over time. It is recommended to set max_step to a small value
@@ -855,37 +855,39 @@ def calc_concentrations(t_eval: ArrayLike,
     max_step : float
         maximum allowed step size for solver.
 
-    T_halfway_steady_state : float
+    half_maximal_target : float
         amount of total Target that is halfway between baseline and steady state amounts
 
     Returns
     -------
     sklearn.utils.Bunch
-        solution returned by scipy.integrate.solve_ivp()
+        Solution returned by scipy.integrate.solve_ivp().
+
+        The `y` field contains the solution, where rows are species and columns are time points.
     """
 
-    def rates(t, y, params, T_halfway_steady_state):
+    def rates(t, y, params, half_maximal_target):
         """Returns ODEs evaluated at (t, y).
 
         Must have call signature func(t, y, *args).
         """
         return kinetic_rates(y, params)
 
-    def jac_rates(t, y, params, T_halfway_steady_state):
+    def jac_rates(t, y, params, half_maximal_target):
         """Returns Jacobian of ODEs evaluated at (t, y).
 
         Must have identical call signature as rates().
         """
         return jac_kinetic_rates(y, params)
 
-    def t_half_event(t, y, params, T_halfway_steady_state) -> float:
+    def t_half_event(t, y, params, half_maximal_target) -> float:
         """Returns difference between total amount of Target in system at time t
-        and the amount that is halfway between baseline and steady state amounts.
+        and half-maximal degradation amount.
 
         Must have identical call signature as rates().
         """
-        T_total_at_t = np.sum(np.concatenate((y[[2, 4]], y[6:])))  # total amount of Target in system at time t
-        return T_total_at_t - T_halfway_steady_state
+        total_target_at_t = np.sum(np.concatenate((y[[2, 4]], y[6:])))  # total amount of Target in system at time t
+        return total_target_at_t - half_maximal_target
 
     t_half_event.terminal = True  # if t_half_event() changes sign, solver will terminate
     t_max = np.max(t_eval)
@@ -896,8 +898,8 @@ def calc_concentrations(t_eval: ArrayLike,
         y0=y0,
         method='BDF',
         t_eval=t_eval,
-        events=t_half_event if T_halfway_steady_state is not None else None,
-        args=(params, T_halfway_steady_state,),
+        events=t_half_event if half_maximal_target is not None else None,
+        args=(params, half_maximal_target,),
         max_step=max_step,
         jac=jac_rates
     )
@@ -906,9 +908,10 @@ def calc_concentrations(t_eval: ArrayLike,
         print("scipy.integrate.solve_ivp() produces negative solutions. Trying smaller max_step size...")
         max_step = max_step / 2  # halve the max_step
         return calc_concentrations(t_eval=t_eval,
-                                   y0=y0, params=params,
+                                   y0=y0,
+                                   params=params,
                                    max_step=max_step,
-                                   T_halfway_steady_state=T_halfway_steady_state
+                                   half_maximal_target=half_maximal_target
                                    )
 
     return result
@@ -1004,7 +1007,7 @@ def calc_Dmax(y0: NDArray,
 
 
 def calc_t_half(t_eval: ArrayLike, y0: NDArray, params: dict[str, float]) -> float:
-    """Computes the time at which the amount of total Target reaches halfway between baseline and steady state amounts.
+    """Computes the time at which the amount of total Target reaches half-maximal degradation amount.
 
     Parameters
     ----------
@@ -1020,23 +1023,23 @@ def calc_t_half(t_eval: ArrayLike, y0: NDArray, params: dict[str, float]) -> flo
     Returns
     -------
     float
-        time at which the amount of total Target reaches halfway between baseline and steady state amounts
+        Time at which the amount of total Target reaches half-maximal degradation amount.
     """
     result = calc_concentrations(t_eval=t_eval, y0=y0, params=params, max_step=0.001)
     initial_guess = result.y[:, -1]  # system state at the last time point
 
     steady_state = solve_steady_state(initial_guess=initial_guess, params=params)
 
-    total_target_steady_state: float = np.sum(np.concatenate((steady_state[[2, 4]], steady_state[6:])))
-    total_target_baseline: float = np.sum(np.concatenate((y0[[2, 4]], y0[6:])))
+    total_target_steady_state: float = np.ndarray.sum(np.concatenate((steady_state[[2, 4]], steady_state[6:])))
+    total_target_baseline: float = np.ndarray.sum(np.concatenate((y0[[2, 4]], y0[6:])))
 
-    total_target_halfway: float = np.mean((total_target_baseline, total_target_steady_state))
+    half_maximal_target: float = (total_target_baseline + total_target_steady_state) * 0.5
 
     result_with_events = calc_concentrations(
         t_eval=t_eval,
         y0=y0, params=params,
         max_step=0.001,
-        T_halfway_steady_state=total_target_halfway
+        half_maximal_target=half_maximal_target
     )
 
     t_half = result_with_events.t_events[0][0]  # first event type, first time point
@@ -1104,15 +1107,15 @@ def calc_degradation_curve(t_eval: ArrayLike,
     assert passes_unit_tests(concentrations_df), "One or more unit tests failed."
 
     # calculate target protein degradation and ternary complex formation
-    total_target_baseline: float = np.sum(np.concatenate((y0[[2, 4]], y0[6:])))  # total amount of Target at baseline
+    total_target_baseline: float = np.ndarray.sum(np.concatenate((y0[[2, 4]], y0[6:])))
 
-    target_totals_over_time: pd.Series = concentrations_df.filter(regex='.*T.*').sum(axis=1)  # total amounts of Target
+    target_totals_over_time: pd.Series = concentrations_df.filter(regex='.*T.*').sum(axis=1)
     ternary_totals_over_time: pd.Series = concentrations_df['Ternary']  # amounts of naked Ternary
-    all_ternary_totals_over_time: pd.Series = concentrations_df.filter(regex='Ternary.*').sum(axis=1)  # total amounts of all Ternary
+    all_ternary_totals_over_time: pd.Series = concentrations_df.filter(regex='Ternary.*').sum(axis=1)
 
-    relative_target: pd.Series = target_totals_over_time / total_target_baseline * 100  # percent total Target relative to baseline Target
-    relative_ternary: pd.Series = ternary_totals_over_time / total_target_baseline * 100  # percent naked Ternary relative to baseline Target
-    relative_all_ternary: pd.Series = all_ternary_totals_over_time / total_target_baseline * 100  # percent total Ternary relative to baseline Target
+    relative_target: pd.Series = target_totals_over_time / total_target_baseline * 100  # percent total Target relative to baseline total Target
+    relative_ternary: pd.Series = ternary_totals_over_time / total_target_baseline * 100  # percent naked Ternary relative to baseline total Target
+    relative_all_ternary: pd.Series = all_ternary_totals_over_time / total_target_baseline * 100  # percent total Ternary relative to baseline total Target
 
     # calculate Dmax
     Dmax: float = calc_Dmax(y0=y0, params=params, initial_guess=concentrations.y[:, -1])
@@ -1124,7 +1127,17 @@ def calc_degradation_curve(t_eval: ArrayLike,
 
     # calculate total intracellular species amounts
     bpd_totals_over_time: pd.Series = concentrations_df.filter(regex='^(?!BPD_ec).*BPD.*').sum(axis=1)
-    t_ub_totals_over_time: pd.Series = concentrations_df.filter(regex='.*T_Ub.*').sum(axis=1)  # total ubiquitinated Target
+    t_ub_totals_over_time: pd.Series = concentrations_df.filter(regex='.*T_Ub.*').sum(axis=1)
+
+    # calculate degradation rate
+    # if r < 0 : net loss in total target
+    #    r = 0 : no net change in total target
+    #    r > 0 : net gain in total target
+    # net change in total target is the sum of rates of all species containing target
+    # dT/dt + dBPD.T/dt + dTernary/dt + dT.Ub/dt + dBPD.T.Ub/dt + dTernary.Ub/dt
+    rates_at_t = np.apply_along_axis(func1d=kinetic_rates, axis=0, arr=concentrations.y, params=params)
+    target_species_rates = np.concatenate((rates_at_t[[2, 4], :], rates_at_t[6:, :]))
+    degradation_rates: NDArray[float] = np.sum(target_species_rates, axis=0)
 
     # create result
     result = pd.DataFrame({
@@ -1135,6 +1148,7 @@ def calc_degradation_curve(t_eval: ArrayLike,
         'Ternary': relative_ternary,
         'all_Ternary': relative_all_ternary,
         'Dmax': Dmax,
+        'degradation_rate': pd.Series(degradation_rates),
         'total_target': target_totals_over_time,
         'total_target_ub': t_ub_totals_over_time,
         'total_naked_ternary': ternary_totals_over_time,
