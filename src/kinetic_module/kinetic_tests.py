@@ -17,7 +17,7 @@ from kinetic_module.calc_full_config import KineticParameters
 
 plt.rcParams["axes.labelsize"] = 20
 plt.rcParams["axes.titlesize"] = 20
-plt.rcParams["figure.figsize"] = (12,8)
+plt.rcParams["figure.figsize"] = (12, 8)
 
 """
 To do:
@@ -119,6 +119,9 @@ def solve_target_degradation(t_eval: Union[ArrayLike, float, int],
     result['Kd_T_binary'] = params['Kd_T_binary']
     result['kon_T_binary'] = params['kon_T_binary']
     result['kub'] = params['kub']
+    result['kde_ub'] = params['kde_ub']
+    result['kdeg_UPS'] = params['kdeg_UPS']
+    result['kdeg_Ternary'] = params['kdeg_Ternary']
     result['alpha'] = params['alpha']
     return result
 
@@ -179,8 +182,8 @@ def run_kinetic_model(config_files: list[str],
 def kd_T_binary_vs_alpha(config_filename: str,
                          protac_id: str,
                          t_eval: Union[ArrayLike, float, int],
-                         alpha_range: ArrayLike,
-                         kd_T_binary_range: ArrayLike,
+                         alpha_range: Iterable[float],
+                         kd_T_binary_range: Iterable[float],
                          initial_BPD_ec_conc: float = None,
                          initial_BPD_ic_conc: float = None,
                          ) -> pd.DataFrame:
@@ -197,10 +200,10 @@ def kd_T_binary_vs_alpha(config_filename: str,
     t_eval : Union[ArrayLike, float, int]
         Time points at which to store compute solution.
 
-    alpha_range : ArrayLike
+    alpha_range : Iterable[float]
         Range of cooperativity values.
 
-    kd_T_binary_range
+    kd_T_binary_range : Iterable[float]
         Range of Kd_T_binary values.
 
     initial_BPD_ec_conc
@@ -212,7 +215,7 @@ def kd_T_binary_vs_alpha(config_filename: str,
     Returns
     -------
     pd.DataFrame
-        result returned by solve_target_degradation() for each (Kd_T_binary, alpha) and initial concentrations.
+        Result returned by solve_target_degradation() for each (Kd_T_binary, alpha) and initial concentrations.
     """
 
     # these parameters will be set to None in order to be calculated and updated by KineticParameters()
@@ -223,41 +226,25 @@ def kd_T_binary_vs_alpha(config_filename: str,
         'Kd_T_ternary',
         'Kd_E3_ternary'
     ]
-
-    params = get_params_from_config(config_filename=config_filename)
-    params = set_keys_to_none(params, keys=keys_to_update)
-
-    # combinations of alpha and Kd_T_binary
-    params_range = [
-        (kd, alpha)
-        for kd in kd_T_binary_range
-        for alpha in alpha_range
-    ]
-
-    params_copies = [params.copy() for _ in params_range]
-    new_params = [
-        update_params(params_copy, keys=['Kd_T_binary', 'alpha'], values=new_values)
-        for params_copy, new_values in zip(params_copies, params_range)
-    ]
-
-    pool = Pool(processes=cpu_count())
-    inputs = [
-        (t_eval, this_params, initial_BPD_ec_conc, initial_BPD_ic_conc, True, protac_id)
-        for this_params in new_params
-    ]
-    outputs: list[pd.DataFrame] = pool.starmap(solve_target_degradation, inputs)
-    pool.close()
-    pool.join()
-
-    result: pd.DataFrame = pd.concat(outputs)
+    result = run_alpha_across_param_levels(
+        config_filename=config_filename,
+        protac_id=protac_id,
+        parameters_to_calc=keys_to_update,
+        other_param_name='Kd_T_binary',
+        other_param_range=kd_T_binary_range,
+        alpha_range=alpha_range,
+        t_eval=t_eval,
+        initial_bpd_ec_conc=initial_BPD_ec_conc,
+        initial_bpd_ic_conc=initial_BPD_ic_conc
+    )
     return result
 
 
 def kub_vs_alpha(config_filename: str,
                  protac_id: str,
                  t_eval: Union[ArrayLike, float, int],
-                 alpha_range: ArrayLike,
-                 kub_range: ArrayLike,
+                 alpha_range: Iterable[float],
+                 kub_range: Iterable[float],
                  initial_BPD_ec_conc: float = None,
                  initial_BPD_ic_conc: float = None) -> pd.DataFrame:
     """Runs kinetic proofreading model for combinations of alpha and kub.
@@ -300,33 +287,257 @@ def kub_vs_alpha(config_filename: str,
         'Kd_T_ternary',
         'Kd_E3_ternary'
     ]
+    result = run_alpha_across_param_levels(
+        config_filename=config_filename,
+        protac_id=protac_id,
+        parameters_to_calc=keys_to_update,
+        other_param_name='kub',
+        other_param_range=kub_range,
+        alpha_range=alpha_range,
+        t_eval=t_eval,
+        initial_bpd_ec_conc=initial_BPD_ec_conc,
+        initial_bpd_ic_conc=initial_BPD_ic_conc
+    )
+    return result
 
+
+def kde_ub_vs_alpha(config_filename: str,
+                    protac_id: str,
+                    t_eval: Union[ArrayLike, float, int],
+                    alpha_range: Iterable[float],
+                    kde_ub_range: Iterable[float],
+                    initial_BPD_ec_conc: float = None,
+                    initial_BPD_ic_conc: float = None) -> pd.DataFrame:
+    # these parameters will be set to None in order to be calculated and updated by KineticParameters()
+    keys_to_update = [
+        'koff_T_binary',
+        'koff_T_ternary',
+        'koff_E3_binary',
+        'koff_E3_ternary',
+        'Kd_T_ternary',
+        'Kd_E3_ternary'
+    ]
+    result = run_alpha_across_param_levels(
+        config_filename=config_filename,
+        protac_id=protac_id,
+        parameters_to_calc=keys_to_update,
+        other_param_name='kde_ub',
+        other_param_range=kde_ub_range,
+        alpha_range=alpha_range,
+        t_eval=t_eval,
+        initial_bpd_ec_conc=initial_BPD_ec_conc,
+        initial_bpd_ic_conc=initial_BPD_ic_conc
+    )
+    return result
+
+
+def kdeg_ups_vs_alpha(config_filename: str,
+                      protac_id: str,
+                      t_eval: Union[ArrayLike, float, int],
+                      alpha_range: Iterable[float],
+                      kdeg_UPS_range: Iterable[float],
+                      initial_BPD_ec_conc: float = None,
+                      initial_BPD_ic_conc: float = None) -> pd.DataFrame:
+    # these parameters will be set to None in order to be calculated and updated by KineticParameters()
+    keys_to_update = [
+        'koff_T_binary',
+        'koff_T_ternary',
+        'koff_E3_binary',
+        'koff_E3_ternary',
+        'Kd_T_ternary',
+        'Kd_E3_ternary'
+    ]
+    result = run_alpha_across_param_levels(
+        config_filename=config_filename,
+        protac_id=protac_id,
+        parameters_to_calc=keys_to_update,
+        other_param_name='kdeg_UPS',
+        other_param_range=kdeg_UPS_range,
+        alpha_range=alpha_range,
+        t_eval=t_eval,
+        initial_bpd_ec_conc=initial_BPD_ec_conc,
+        initial_bpd_ic_conc=initial_BPD_ic_conc
+    )
+    return result
+
+
+def kdeg_ternary_vs_alpha(config_filename: str,
+                          protac_id: str,
+                          t_eval: Union[ArrayLike, float, int],
+                          alpha_range: Iterable[float],
+                          kdeg_Ternary_range: Iterable[float],
+                          initial_BPD_ec_conc: float = None,
+                          initial_BPD_ic_conc: float = None) -> pd.DataFrame:
+    # these parameters will be set to None in order to be calculated and updated by KineticParameters()
+    keys_to_update = [
+        'koff_T_binary',
+        'koff_T_ternary',
+        'koff_E3_binary',
+        'koff_E3_ternary',
+        'Kd_T_ternary',
+        'Kd_E3_ternary'
+    ]
+    result = run_alpha_across_param_levels(
+        config_filename=config_filename,
+        protac_id=protac_id,
+        parameters_to_calc=keys_to_update,
+        other_param_name='kdeg_Ternary',
+        other_param_range=kdeg_Ternary_range,
+        alpha_range=alpha_range,
+        t_eval=t_eval,
+        initial_bpd_ec_conc=initial_BPD_ec_conc,
+        initial_bpd_ic_conc=initial_BPD_ic_conc
+    )
+    return result
+
+
+def run_alpha_across_param_levels(config_filename: str,
+                                  protac_id: str,
+                                  parameters_to_calc: list[str],
+                                  other_param_name: str,
+                                  other_param_range: Iterable[float],
+                                  alpha_range: Iterable[float],
+                                  t_eval: Union[ArrayLike, float, int],
+                                  initial_bpd_ec_conc: float,
+                                  initial_bpd_ic_conc: float
+                                  ) -> pd.DataFrame:
+    """Runs kinetic proofreading model for combinations of alpha and another parameter.
+
+    Parameters
+    ----------
+    config_filename : str
+        Config filename.
+
+    protac_id : str
+        PROTAC identifier.
+
+    parameters_to_calc : list[str]
+        Names of parameters to re-calculate using new alpha and other parameter values.
+
+    other_param_name : str
+        Name of other parameter with which to pair with alpha.
+
+    other_param_range : Iterable[float]
+        Range of other parameter values with which to pair with alpha.
+
+    alpha_range : Iterable[float]
+        Range of alpha values with which to pair with other parameter.
+
+    t_eval : Union[ArrayLike, float, int]
+        Kinetic model solution at last time point will be stored.
+
+    initial_bpd_ec_conc : float
+        Initial concentration of extracellular BPD.
+
+    initial_bpd_ic_conc : float
+        Initial concentration of intracellular BPD.
+
+    Returns
+    -------
+    pd.DataFrame
+        Kinetic model solution for each alpha across another parameter levels.
+    """
     params = get_params_from_config(config_filename=config_filename)
-    params = set_keys_to_none(params, keys=keys_to_update)
+    params = set_keys_to_none(params, keys=parameters_to_calc)
 
-    # combinations of kub and alpha
+    # combinations of alpha across levels of other parameter
     params_range = [
-        (kub, alpha)
-        for kub in kub_range
+        (other_param_level, alpha)
+        for other_param_level in other_param_range
         for alpha in alpha_range
     ]
 
-    params_copies = [params.copy() for _ in params_range]
-    new_params = [
-        update_params(params_copy, keys=['kub', 'alpha'], values=new_values)
-        for params_copy, new_values in zip(params_copies, params_range)
+    # list of parameters dictionaries updated for each alpha across each level of other parameter
+    new_params: list[dict[str, float]] = copy_params(
+        params=params,
+        parameter_names=[other_param_name, 'alpha'],
+        new_values=params_range
+    )
+
+    result = pool_solve_target_degradation(
+        t_eval=t_eval,
+        params_list=new_params,
+        initial_bpd_ec_conc=initial_bpd_ec_conc,
+        initial_bpd_ic_conc=initial_bpd_ic_conc,
+        return_only_final_state=True,
+        protac_id=protac_id
+    )
+    return result
+
+
+def pool_solve_target_degradation(t_eval: Union[ArrayLike, float, int],
+                                  params_list: list[dict[str, float]],
+                                  initial_bpd_ec_conc: float,
+                                  initial_bpd_ic_conc: float,
+                                  return_only_final_state: bool,
+                                  protac_id: str) -> pd.DataFrame:
+    """Calls solve_target_degradation() in parallel for multiple parameter dictionaries.
+
+    Parameters
+    ----------
+    t_eval : Union[ArrayLike, float, int]
+        Time points at which to store computed solution.
+
+    params_list : list[dict[str, float]]
+        Multiple sets of kinetic rate constants and model parameters for rate equations.
+
+    initial_bpd_ec_conc : Optional[Union[ArrayLike, float, int]]
+        Initial value of BPD_ec concentration.
+
+    initial_bpd_ic_conc : Optional[Union[ArrayLike, float, int]]
+        Initial value of BPD_ic concentration.
+
+    return_only_final_state : bool
+        Whether to return only final state of system.
+
+    protac_id : str
+        PROTAC identifier.
+
+    Returns
+    -------
+    pd.DataFrame
+        Concatenated DataFrame of results from each parameter dictionary.
+    """
+    inputs = [
+        (t_eval, params, initial_bpd_ec_conc, initial_bpd_ic_conc, return_only_final_state, protac_id)
+        for params in params_list
     ]
 
     pool = Pool(processes=cpu_count())
-    inputs = [
-        (t_eval, this_params, initial_BPD_ec_conc, initial_BPD_ic_conc, True, protac_id)
-        for this_params in new_params
-    ]
-    outputs: list[pd.DataFrame] = pool.starmap(solve_target_degradation, inputs)
+    outputs = pool.starmap(solve_target_degradation, inputs)
     pool.close()
     pool.join()
 
-    result: pd.DataFrame = pd.concat(outputs)
+    result = pd.concat(outputs)
+    return result
+
+
+def copy_params(params: dict[str, float],
+                parameter_names: Iterable[str],
+                new_values: list[tuple[float, ...]]) -> list[dict[str, float]]:
+    """Updates parameters for each set of new values.
+
+    Parameters
+    ----------
+    params : dict[str, float]
+        Kinetic rate constants and model parameters.
+
+    new_values : list[tuple[float]]
+        List of new parameter values.
+
+    parameter_names : list[str]
+        Names of parameters to set to new values.
+
+    Returns
+    -------
+    list[dict[str, float]]
+        Updated parameter dictionaries re-calculated with new values.
+    """
+    params_copies: list[dict[str, float]] = [params.copy() for _ in new_values]
+    result = [
+        update_params(params=params_copy, keys=parameter_names, values=values)
+        for params_copy, values in zip(params_copies, new_values)
+    ]
     return result
 
 
