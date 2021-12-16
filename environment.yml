@@ -1,4 +1,4 @@
-name: kinetic-model
+name: kinetic-degradation
 dependencies:
   - python>=3.9
   - pip

@@ -14,6 +14,11 @@ Dependencies can be found in `environment.yml`. To create an environment satisfy
 conda env create
 ```
 
+Activate the created environment with:
+```commandline
+conda activate kinetic-degradation
+```
+
 ## Notation
 
 We maintain a similar notation as used by Bartlett et al. and denote the amounts of species involved in the UPS as follows. Ensure that all initial values and model parameters have **_consistent units_**. We will use micromolar for concentration, liter for volume, and hour for time.
