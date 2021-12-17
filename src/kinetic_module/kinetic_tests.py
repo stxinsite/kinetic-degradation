@@ -1,6 +1,8 @@
 """
 This module contains functions used to run a kinetic proofreading model of target protein degradation
 using configuration(s) of model parameters and initial values.
+
+
 """
 from typing import Iterable, Union, Optional
 from multiprocessing import Pool, cpu_count
@@ -579,6 +581,8 @@ def get_params_from_config(config_filename: str) -> Optional[dict[str, float]]:
     ValueError
         If config is insufficient or inconsistent.
     """
+    split_config_filename = config_filename.split(sep='.')
+    assert split_config_filename[-1] in ['yml', 'yaml'], 'File extension must be `.yml` or `.yaml`.'
 
     # this will probably break if cwd is not kinetic-degradation
     with open(file=f'./data/{config_filename}', mode='r') as file:
