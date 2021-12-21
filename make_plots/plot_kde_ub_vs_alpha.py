@@ -1,4 +1,4 @@
-"""This script plots the results of an analysis of the effect of cooperativity and ubiquitination rate on degradation.
+"""This script plots the results of an analysis of the effect of cooperativity and de-ubiquitination rate on degradation.
 """
 import numpy as np
 import pandas as pd
@@ -12,20 +12,20 @@ plt.rcParams["figure.figsize"] = (10,7)
 
 protac_id = 'ACBI1'
 t = 6
-result_id = f"{protac_id}t={t}_kub_vs_alpha_DEG"
+result_id = f"{protac_id}t={t}_kde_ub_vs_alpha_DEG"
 
 result = pd.read_csv(f"./saved_objects/{result_id}.csv")
 alpha_range = result['alpha'].unique()
 bpd_ec = result['initial_BPD_ec_conc'].unique()[0]
 
-result['net_kub'] = result.kub - 180.
+result['net_kub'] = result.kub - result.kde_ub
 
-result = result[['degradation', 'all_Ternary', 'alpha', 'kub']]
+result = result[['degradation', 'all_Ternary', 'alpha', 'kde_ub']]
 result = result.rename(columns={
     'degradation': 'Degradation',
     'all_Ternary': 'Ternary'
 })
-result = result.melt(id_vars=['alpha', 'kub'])
+result = result.melt(id_vars=['alpha', 'kde_ub'])
 
 pal = sns.color_palette('Set2')
 pal_hex = pal.as_hex()
@@ -36,7 +36,7 @@ p = sns.lineplot(
     data=result,
     x='alpha',
     y='value',
-    hue='kub',
+    hue='kde_ub',
     style='variable',
     palette='Set2',
     linewidth=2,
@@ -59,7 +59,7 @@ plt.title(
 # plt.text(10 ** 1.1, 70, r'$K_d = 10$', horizontalalignment='left', size=16, color=pal_hex[2])
 # plt.text(10 ** 2.1, 70, r'$K_d = 100$', horizontalalignment='left', size=16, color=pal_hex[3])
 handles, labels = ax.get_legend_handles_labels()
-labels[0] = "Ubiquitination rate (1/h)"
+labels[0] = "De-ubiquitination rate (1/h)"
 # labels[0] = 'Net ubiquitination (1/h)'
 ax.legend(handles=handles, labels=labels, bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0)
 plt.setp(ax.get_legend().get_texts(), fontsize='15') # for legend text

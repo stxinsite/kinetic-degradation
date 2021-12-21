@@ -1,5 +1,4 @@
-"""This script plots the results of an analysis of the effect of cooperativity and ubiquitination rate on degradation.
-"""
+
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -12,20 +11,19 @@ plt.rcParams["figure.figsize"] = (10,7)
 
 protac_id = 'ACBI1'
 t = 6
-result_id = f"{protac_id}t={t}_kub_vs_alpha_DEG"
+result_id = f"{protac_id}t={t}_ps_cell_vs_alpha_DEG"
 
 result = pd.read_csv(f"./saved_objects/{result_id}.csv")
 alpha_range = result['alpha'].unique()
 bpd_ec = result['initial_BPD_ec_conc'].unique()[0]
 
-result['net_kub'] = result.kub - 180.
 
-result = result[['degradation', 'all_Ternary', 'alpha', 'kub']]
+result = result[['alpha', 'degradation', 'all_Ternary', 'PS_cell']]
 result = result.rename(columns={
     'degradation': 'Degradation',
     'all_Ternary': 'Ternary'
 })
-result = result.melt(id_vars=['alpha', 'kub'])
+result_melt = result.melt(id_vars=['alpha', 'PS_cell'])
 
 pal = sns.color_palette('Set2')
 pal_hex = pal.as_hex()
@@ -33,10 +31,10 @@ pal_hex = pal.as_hex()
 sns.set_style("whitegrid")
 fig, ax = plt.subplots()
 p = sns.lineplot(
-    data=result,
+    data=result_melt,
     x='alpha',
     y='value',
-    hue='kub',
+    hue='PS_cell',
     style='variable',
     palette='Set2',
     linewidth=2,
@@ -52,15 +50,11 @@ plt.ylabel('% Baseline Target Protein')
 plt.title(
     f'Target Protein Degradation with [{protac_id}]'
     + r'$_{ec} = $'
-    + fr'${bpd_ec}\mu$M at $t = {t}h$'
+    + fr'${bpd_ec}\mu$M at $t = {t}h$',
+    y=1.05
 )
-# plt.text(10 ** -0.65, 70, r'$K_d = 0.1$', horizontalalignment='left', size=16, color=pal_hex[0])
-# plt.text(10 ** 0.15, 70, r'$K_d = 1$', horizontalalignment='left', size=16, color=pal_hex[1])
-# plt.text(10 ** 1.1, 70, r'$K_d = 10$', horizontalalignment='left', size=16, color=pal_hex[2])
-# plt.text(10 ** 2.1, 70, r'$K_d = 100$', horizontalalignment='left', size=16, color=pal_hex[3])
 handles, labels = ax.get_legend_handles_labels()
-labels[0] = "Ubiquitination rate (1/h)"
-# labels[0] = 'Net ubiquitination (1/h)'
+labels[0] = "Permeability surface area (L/h)"
 ax.legend(handles=handles, labels=labels, bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0)
 plt.setp(ax.get_legend().get_texts(), fontsize='15') # for legend text
 plt.setp(ax.get_legend().get_title(), fontsize='15') # for legend title
