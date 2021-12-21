@@ -133,8 +133,7 @@ def dBPD_icdt(BPD_ec: float,
         dBPD_ic / dt
     """
     return (
-            params['PS_cell'] * (
-                (params['fu_ec'] * BPD_ec / params['Vec']) - (params['fu_ic'] * BPD_ic / params['Vic']))
+            params['PS_cell'] * ((params['fu_ec'] * BPD_ec / params['Vec']) - (params['fu_ic'] * BPD_ic / params['Vic']))
             - params['kon_T_binary'] * params['fu_ic'] * BPD_ic * (T + np.sum(T_Ubs)) / params['Vic']
             + (params['koff_T_binary'] + params['kdeg_T']) * (BPD_T + np.sum(BPD_T_Ubs))
             - params['kon_E3_binary'] * params['fu_ic'] * BPD_ic * E3 / params['Vic']
