@@ -1127,6 +1127,8 @@ def calc_degradation_curve(t_eval: ArrayLike,
     # calculate total intracellular species amounts
     bpd_totals_over_time: pd.Series = concentrations_df.filter(regex='^(?!BPD_ec).*BPD.*').sum(axis=1)
     t_ub_totals_over_time: pd.Series = concentrations_df.filter(regex='.*T_Ub.*').sum(axis=1)
+    poly_ub_target_totals_over_time: pd.Series = concentrations_df.filter(regex=f".*T_Ub_{params['n']}").sum(axis=1)
+    poly_ub_ternary_totals_over_time: pd.Series = concentrations_df[f"Ternary_Ub_{params['n']}"]
 
     # calculate degradation rate
     # if r < 0 : net loss in total target
@@ -1137,6 +1139,15 @@ def calc_degradation_curve(t_eval: ArrayLike,
     rates_at_t = np.apply_along_axis(func1d=kinetic_rates, axis=0, arr=concentrations.y, params=params)
     target_species_rates = np.concatenate((rates_at_t[[2, 4], :], rates_at_t[6:, :]))
     degradation_rates: NDArray[float] = np.sum(target_species_rates, axis=0)
+    naked_ternary_rates = pd.Series(rates_at_t[6, :])
+    try:
+        poly_ub_target_rates = pd.Series(rates_at_t[6 + params['n'], :])
+        poly_ub_ternary_rates = pd.Series(rates_at_t[-1, :])
+    except IndexError:
+        poly_ub_target_rates = None
+        poly_ub_ternary_rates = None
+
+
 
     # create result
     result = pd.DataFrame({
@@ -1148,11 +1159,16 @@ def calc_degradation_curve(t_eval: ArrayLike,
         'all_Ternary': relative_all_ternary,
         'Dmax': Dmax,
         'degradation_rate': pd.Series(degradation_rates),
+        'naked_ternary_rate': naked_ternary_rates,
+        'poly_ub_target_rate': poly_ub_target_rates,
+        'poly_ub_ternary_rate': poly_ub_ternary_rates,
         'total_target': target_totals_over_time,
         'total_target_ub': t_ub_totals_over_time,
         'total_naked_ternary': ternary_totals_over_time,
         'total_ternary': all_ternary_totals_over_time,
-        'total_bpd_ic': bpd_totals_over_time
+        'total_bpd_ic': bpd_totals_over_time,
+        'total_poly_ub_target': poly_ub_target_totals_over_time,
+        'total_poly_ub_ternary': poly_ub_ternary_totals_over_time
     })
 
     if return_only_final_state:
