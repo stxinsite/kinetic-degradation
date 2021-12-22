@@ -4,7 +4,9 @@ This repo implements a kinetic proofreading model of protein degradation via the
 this repo can perform the following functions:
 - solve a system of ODEs for the system state over time
 - calculate target protein degradation, ternary complex formation, Dmax (percent maximum degradation)
-- compute species totals over time 
+- compute species totals over time
+
+For mathematical details, see technical document [here](https://www.overleaf.com/read/zmcpqnbknhqs).
 
 ## Prerequisites
 
