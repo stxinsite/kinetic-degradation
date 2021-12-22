@@ -76,7 +76,7 @@ p = sns.lineplot(data=rates, x='t', y='value', hue='variable', palette='Set2', a
 q = sns.lineplot(data=rates, x='t', y='value', hue='variable', palette='Set2', ax=ax2)
 # limit the view to different portions of data
 ax1.set_ylim(-5e-18, 3e-17)
-ax2.set_ylim(-4.5e-14, 0)
+ax2.set_ylim(-1e-14, 0)
 # hide labels
 ax1.set(ylabel=None, xlabel=None)
 ax2.set(ylabel=None, xlabel=None)
