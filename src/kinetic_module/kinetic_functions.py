@@ -1,7 +1,7 @@
 """
 This module contains functions used to implement a kinetic proofreading model of target protein degradation.
 """
-from typing import Optional
+from typing import Optional, Iterable
 
 import numpy as np
 from numpy.typing import NDArray, ArrayLike
@@ -1140,14 +1140,15 @@ def calc_degradation_curve(t_eval: ArrayLike,
     target_species_rates = np.concatenate((rates_at_t[[2, 4], :], rates_at_t[6:, :]))
     degradation_rates: NDArray[float] = np.sum(target_species_rates, axis=0)
     naked_ternary_rates = pd.Series(rates_at_t[6, :])
-    try:
-        poly_ub_target_rates = pd.Series(rates_at_t[6 + params['n'], :])
-        poly_ub_ternary_rates = pd.Series(rates_at_t[-1, :])
-    except IndexError:
-        poly_ub_target_rates = None
-        poly_ub_ternary_rates = None
-
-
+    poly_ub_target_rates = pd.Series(rates_at_t[6 + params['n'], :]) if params['n'] > 0 else None
+    poly_ub_ternary_rates = pd.Series(rates_at_t[-1, :]) if params['n'] > 0 else None
+    assert check_target_degradation_rates(
+        params=params,
+        degradation_from_ode=degradation_rates,
+        total_target=target_totals_over_time,
+        total_poly_ub_target=poly_ub_target_totals_over_time,
+        total_poly_ub_ternary=poly_ub_ternary_totals_over_time
+    )
 
     # create result
     result = pd.DataFrame({
@@ -1175,6 +1176,41 @@ def calc_degradation_curve(t_eval: ArrayLike,
         return result.iloc[-1:]  # return system state only at final time point
 
     return result
+
+
+def check_target_degradation_rates(params: dict[str, float],
+                                   degradation_from_ode: Iterable[float],
+                                   total_target: Iterable[float],
+                                   total_poly_ub_target: Iterable[float],
+                                   total_poly_ub_ternary: Iterable[float]) -> bool:
+    """Checks whether simulated instantaneous degradation rates equal instantaneous degradation rates from ODEs.
+
+    Parameters
+    ----------
+    params : dict[str, float]
+        Kinetic rate constants and model parameters.
+    degradation_from_ode : Iterable[float]
+        Instantaneous degradation rates calculated from ODEs.
+    total_target : Iterable[float]
+        Instantaneous total target amounts.
+    total_poly_ub_target : Iterable[float]
+        Instantaneous total poly-ubiquitinated target amounts.
+    total_poly_ub_ternary : Iterable[float]
+        Instantaneous total poly-ubiquitinated ternary amounts.
+
+    Returns
+    -------
+    bool
+        True if simulated instantaneous degradation rates equal ODE degradation rates.
+    """
+    degradation_from_sim = (
+        params['kprod_T']
+        - params['kdeg_T'] * total_target
+        - params['kdeg_UPS'] * total_poly_ub_target
+        - params['kdeg_Ternary'] * total_poly_ub_ternary
+    )
+    # print(degradation_from_sim - degradation_from_ode)
+    return np.allclose(degradation_from_ode, degradation_from_sim, atol=1e-25)
 
 
 """
