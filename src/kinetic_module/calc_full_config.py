@@ -1,5 +1,7 @@
 from typing import Literal, Optional
 import numpy as np
+import json
+
 
 class KineticParameters(object):
     """A class used to check and solve for model parameters.
@@ -73,6 +75,9 @@ class KineticParameters(object):
         self.warning_messages: set[str] = set()
         self.forward_pass()
         self.backward_pass()
+
+    def __str__(self):
+        return json.dumps(self._params, indent=4)
 
     @property
     def params(self) -> dict[str, float]:
