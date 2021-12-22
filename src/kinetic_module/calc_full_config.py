@@ -14,13 +14,6 @@ class KineticParameters(object):
 
     Attributes
     ----------
-    binding_equilibrium_expr : list[tuple[str, str, str, int]]]
-        expressions relating kinetic rate constants to each other
-    cooperativity_expr : list[tuple[str, str, str, int]]]
-        expressions relating binding affinities and cooperativity to each other
-    expression_list : list[tuple[str, str, str, int]]]
-        a list of tuples (lhs_key, rhs_key1, rhs_key2, pwr) where
-        lhs_key = rhs_key1 * (rhs_key2 ** pwr)
     _params : dict[str, float]
         kinetic rate constants and model parameters for rate equations
     warning_messages: set[str]
@@ -64,6 +57,23 @@ class KineticParameters(object):
 
     expression_list: list[tuple[str, str, str, int]] = binding_equilibrium_expr + cooperativity_expr
 
+    model_params: list[str] = [
+        "n",
+        "kub",
+        "kde_ub",
+        "kdeg_UPS",
+        "kdeg_Ternary",
+        "fu_ec",
+        "fu_ic",
+        "PS_cell",
+        "kdeg_T",
+        "Conc_T_base",
+        "Conc_E3_base",
+        "num_cells",
+        "Vic",
+        "Vec"
+    ]
+
     def __init__(self, params: dict[str, float]):
         """
         Parameters
@@ -73,8 +83,11 @@ class KineticParameters(object):
         """
         self._params: dict[str, float] = params.copy()
         self.warning_messages: set[str] = set()
+        self.check_non_negative()
         self.forward_pass()
         self.backward_pass()
+        self.check_model_params()
+        self.calc_kprod()
 
     def __str__(self):
         return json.dumps(self._params, indent=4)
@@ -99,7 +112,7 @@ class KineticParameters(object):
             try:
                 self._params[lhs_key]
             except KeyError:
-                print(f"{lhs_key} was not provided")
+                print(f"{lhs_key} was not provided.")
             finally:
                 value = self._params.setdefault(lhs_key)
 
@@ -130,6 +143,41 @@ class KineticParameters(object):
         """Checks or calculates parameters in backward direction.
         """
         self.test_and_calc_params(direction=-1)
+
+    def calc_kprod(self):
+        """Calculates intrinsic rate of target protein production.
+        """
+        _ = self._params.setdefault('kprod_T')
+        try:
+            base_target_conc = self._params['Conc_T_base']
+            vic = self._params['Vic']
+            kdeg_intrinsic = self._params['kdeg_T']
+        except KeyError:
+            self.warning_messages.add("kprod parameter cannot be calculated.")
+        else:
+            self._params['kprod_T'] = base_target_conc * vic * kdeg_intrinsic
+
+    def check_model_params(self):
+        """Checks that model parameters exist and are defined.
+        """
+        for key in self.model_params:
+            try:
+                val = self._params[key]
+            except KeyError:
+                self.warning_messages.add(f"{key} was not provided.")
+            else:
+                if val is None:
+                    self.warning_messages.add(f"{key} is undefined.")
+
+    def check_non_negative(self):
+        """Checks that all parameters are non-negative.
+        """
+        for key, val in self._params.items():
+            if val is None:
+                pass
+            else:
+                if val < 0:
+                    self.warning_messages.add(f"{key} cannot be less than 0.")
 
     def is_fully_defined(self) -> bool:
         """Checks whether all parameters are known and consistent.

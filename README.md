@@ -77,7 +77,7 @@ The config file must contain the following keys (with units in parentheses):
   - fu_ec: fraction unbound extracellular BPD
   - fu_ic: fraction unbound intracellular BPD
   - PS_cell (L/h): permeability-surface area product
-  - kprod_T (umol/h): intrinsic target protein production rate (Conc_T_base * Vic * kdeg_T)
+  - kprod_T (umol/h): [Optional] intrinsic target protein production rate. Will be calculated and set to Conc_T_base * Vic * kdeg_T
   - kdeg_T (1/h): intrinsic target protein degradation rate
   - Conc_T_base (uM): baseline target protein concentration
   - Conc_E3_base (uM): baseline E3 concentration

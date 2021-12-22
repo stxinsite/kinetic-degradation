@@ -15,11 +15,10 @@ n: 4
 kub: 5000
 kde_ub: 180
 kdeg_UPS: 360
-kdeg_Ternary: 3
+kdeg_Ternary: 0
 fu_ec: 1
 fu_ic: 1
 PS_cell: 2.49e-11
-kprod_T: 4.0e-16
 kdeg_T: 0.1
 Conc_T_base: 0.1
 Conc_E3_base: 0.1
