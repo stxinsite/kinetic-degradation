@@ -1116,6 +1116,8 @@ def calc_degradation_curve(t_eval: ArrayLike,
     relative_ternary: pd.Series = ternary_totals_over_time / total_target_baseline * 100  # percent naked Ternary relative to baseline total Target
     relative_all_ternary: pd.Series = all_ternary_totals_over_time / total_target_baseline * 100  # percent total Ternary relative to baseline total Target
 
+    degradation: pd.Series = 100 - relative_target
+
     # calculate Dmax
     Dmax: float = calc_Dmax(y0=y0, params=params, initial_guess=concentrations.y[:, -1])
     # average_relative_T = (relative_T.min() + relative_T.max()) / 2  # average of min and max Target degradation seen so far
@@ -1155,9 +1157,10 @@ def calc_degradation_curve(t_eval: ArrayLike,
         't': pd.Series(t_eval),
         'initial_BPD_ec_conc': initial_BPD_ec_conc,
         'initial_BPD_ic_conc': initial_BPD_ic_conc,
-        'degradation': relative_target,
-        'Ternary': relative_ternary,
-        'all_Ternary': relative_all_ternary,
+        'percent_degradation': degradation,
+        'relative_target': relative_target,
+        'relative_naked_ternary': relative_ternary,
+        'relative_all_ternary': relative_all_ternary,
         'Dmax': Dmax,
         'degradation_rate': pd.Series(degradation_rates),
         'naked_ternary_rate': naked_ternary_rates,
