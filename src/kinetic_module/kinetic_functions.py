@@ -1127,7 +1127,7 @@ def calc_degradation_curve(t_eval: ArrayLike,
     # x0 = concentrations.y[:, initial_guess_idx]
 
     # calculate total intracellular species amounts
-    bpd_totals_over_time: pd.Series = concentrations_df.filter(regex='^(?!BPD_ec).*BPD.*').sum(axis=1)
+    bpd_totals_over_time: pd.Series = concentrations_df.filter(regex='(^(?!BPD_ec).*BPD.*)|(Ternary.*)').sum(axis=1)
     t_ub_totals_over_time: pd.Series = concentrations_df.filter(regex='.*T_Ub.*').sum(axis=1)
     poly_ub_target_totals_over_time: pd.Series = concentrations_df.filter(regex=f".*T_Ub_{params['n']}").sum(axis=1)
     poly_ub_ternary_totals_over_time: pd.Series = concentrations_df[f"Ternary_Ub_{params['n']}"]
@@ -1212,8 +1212,8 @@ def check_target_degradation_rates(params: dict[str, float],
         - params['kdeg_UPS'] * total_poly_ub_target
         - params['kdeg_Ternary'] * total_poly_ub_ternary
     )
-    # print(degradation_from_sim - degradation_from_ode)
-    return np.allclose(degradation_from_ode, degradation_from_sim, atol=1e-25)
+
+    return np.allclose(degradation_from_ode, degradation_from_sim)
 
 
 """
