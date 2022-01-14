@@ -126,6 +126,8 @@ def solve_target_degradation(t_eval: Union[ArrayLike, float, int],
     result['kdeg_Ternary'] = params['kdeg_Ternary']
     result['alpha'] = params['alpha']
     result['PS_cell'] = params['PS_cell']
+    result['Conc_T_base'] = params['Conc_T_base']
+    result['kprod'] = params['kprod_T']
     return result
 
 
@@ -281,7 +283,7 @@ def kub_vs_alpha(config_filename: str,
         result returned by solve_target_degradation() for each (kub, alpha) and initial concentrations.
     """
 
-    # these parameters will be set to None in order to be calculated and updated by KineticParameters()
+    # these parameters will be set to None in order to be calculated and updated by KineticParameters() with new alpha
     keys_to_update = [
         'koff_T_binary',
         'koff_T_ternary',
@@ -311,7 +313,7 @@ def kde_ub_vs_alpha(config_filename: str,
                     kde_ub_range: Iterable[float],
                     initial_BPD_ec_conc: float = None,
                     initial_BPD_ic_conc: float = None) -> pd.DataFrame:
-    # these parameters will be set to None in order to be calculated and updated by KineticParameters()
+    # these parameters will be set to None in order to be calculated and updated by KineticParameters() with new alpha
     keys_to_update = [
         'koff_T_binary',
         'koff_T_ternary',
@@ -341,7 +343,7 @@ def kdeg_ups_vs_alpha(config_filename: str,
                       kdeg_UPS_range: Iterable[float],
                       initial_BPD_ec_conc: float = None,
                       initial_BPD_ic_conc: float = None) -> pd.DataFrame:
-    # these parameters will be set to None in order to be calculated and updated by KineticParameters()
+    # these parameters will be set to None in order to be calculated and updated by KineticParameters() with new alpha
     keys_to_update = [
         'koff_T_binary',
         'koff_T_ternary',
@@ -371,7 +373,7 @@ def kdeg_ternary_vs_alpha(config_filename: str,
                           kdeg_Ternary_range: Iterable[float],
                           initial_BPD_ec_conc: float = None,
                           initial_BPD_ic_conc: float = None) -> pd.DataFrame:
-    # these parameters will be set to None in order to be calculated and updated by KineticParameters()
+    # these parameters will be set to None in order to be calculated and updated by KineticParameters() with new alpha
     keys_to_update = [
         'koff_T_binary',
         'koff_T_ternary',
@@ -401,7 +403,7 @@ def ps_cell_vs_alpha(config_filename: str,
                      ps_cell_range: Iterable[float],
                      initial_BPD_ec_conc: float = None,
                      initial_BPD_ic_conc: float = None) -> pd.DataFrame:
-    # these parameters will be set to None in order to be calculated and updated by KineticParameters()
+    # these parameters will be set to None in order to be calculated and updated by KineticParameters() with new alpha
     keys_to_update = [
         'koff_T_binary',
         'koff_T_ternary',
@@ -416,6 +418,36 @@ def ps_cell_vs_alpha(config_filename: str,
         parameters_to_calc=keys_to_update,
         other_param_name='PS_cell',
         other_param_range=ps_cell_range,
+        alpha_range=alpha_range,
+        t_eval=t_eval,
+        initial_bpd_ec_conc=initial_BPD_ec_conc,
+        initial_bpd_ic_conc=initial_BPD_ic_conc
+    )
+    return result
+
+
+def kprod_vs_alpha(config_filename: str,
+                   protac_id: str,
+                   t_eval: Union[ArrayLike, float, int],
+                   alpha_range: Iterable[float],
+                   initial_target_conc_range: Iterable[float],
+                   initial_BPD_ec_conc: float = None,
+                   initial_BPD_ic_conc: float = None) -> pd.DataFrame:
+    # these parameters will be set to None in order to be calculated and updated by KineticParameters() with new alpha
+    keys_to_update = [
+        'koff_T_binary',
+        'koff_T_ternary',
+        'koff_E3_binary',
+        'koff_E3_ternary',
+        'Kd_T_ternary',
+        'Kd_E3_ternary'
+    ]
+    result = run_alpha_across_param_levels(
+        config_filename=config_filename,
+        protac_id=protac_id,
+        parameters_to_calc=keys_to_update,
+        other_param_name='Conc_T_base',
+        other_param_range=initial_target_conc_range,
         alpha_range=alpha_range,
         t_eval=t_eval,
         initial_bpd_ec_conc=initial_BPD_ec_conc,
