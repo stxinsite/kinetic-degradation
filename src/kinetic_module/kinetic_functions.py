@@ -1098,7 +1098,7 @@ def calc_degradation_curve(t_eval: ArrayLike,
     concentrations = calc_concentrations(t_eval=t_eval, y0=y0, params=params, max_step=0.001)
     assert concentrations.success, "Integration by ODE solver failed."
 
-    # format solution
+    # format simulation results as DataFrame
     concentrations_df: pd.DataFrame
     concentrations_df = dataframe_concentrations(solve_ivp_result=concentrations, num_Ub_steps=params['n'])
 
@@ -1108,31 +1108,21 @@ def calc_degradation_curve(t_eval: ArrayLike,
     # calculate target protein degradation and ternary complex formation
     total_target_baseline: float = np.ndarray.sum(np.concatenate((y0[[2, 4]], y0[6:])))
 
-    target_totals_over_time: pd.Series = concentrations_df.filter(regex='.*T.*').sum(axis=1)
-    ternary_totals_over_time: pd.Series = concentrations_df['Ternary']  # amounts of naked Ternary
-    all_ternary_totals_over_time: pd.Series = concentrations_df.filter(regex='Ternary.*').sum(axis=1)
-
-    relative_target: pd.Series = target_totals_over_time / total_target_baseline * 100  # percent total Target relative to baseline total Target
-    relative_ternary: pd.Series = ternary_totals_over_time / total_target_baseline * 100  # percent naked Ternary relative to baseline total Target
-    relative_all_ternary: pd.Series = all_ternary_totals_over_time / total_target_baseline * 100  # percent total Ternary relative to baseline total Target
-
-    degradation: pd.Series = 100 - relative_target
-
-    # calculate Dmax
-    Dmax: float = calc_Dmax(y0=y0, params=params, initial_guess=concentrations.y[:, -1])
+    # # calculate Dmax
+    # Dmax: float = calc_Dmax(y0=y0, params=params, initial_guess=concentrations.y[:, -1])
     # average_relative_T = (relative_T.min() + relative_T.max()) / 2  # average of min and max Target degradation seen so far
     # relative_T_index = pd.Index(relative_T)  # index object
     # # let initial guess for steady state be system near half Target degradation
     # initial_guess_idx = relative_T_index.get_loc(average_relative_T, method = 'nearest')
     # x0 = concentrations.y[:, initial_guess_idx]
 
-    # calculate total intracellular species amounts
-    bpd_totals_over_time: pd.Series = concentrations_df.filter(regex='(^(?!BPD_ec).*BPD.*)|(Ternary.*)').sum(axis=1)
-    t_ub_totals_over_time: pd.Series = concentrations_df.filter(regex='.*T_Ub.*').sum(axis=1)
-    poly_ub_target_totals_over_time: pd.Series = concentrations_df.filter(regex=f".*T_Ub_{params['n']}").sum(axis=1)
-    poly_ub_ternary_totals_over_time: pd.Series = concentrations_df[f"Ternary_Ub_{params['n']}"]
+    # # calculate total intracellular species amounts
+    # bpd_totals_over_time: pd.Series = concentrations_df.filter(regex='(^(?!BPD_ec).*BPD.*)|(Ternary.*)').sum(axis=1)
+    # t_ub_totals_over_time: pd.Series = concentrations_df.filter(regex='.*T_Ub.*').sum(axis=1)
+    # poly_ub_target_totals_over_time: pd.Series = concentrations_df.filter(regex=f".*T_Ub_{params['n']}").sum(axis=1)
+    # poly_ub_ternary_totals_over_time: pd.Series = concentrations_df[f"Ternary_Ub_{params['n']}"]
 
-    # calculate degradation rate
+    # calculate degradation rates
     # if r < 0 : net loss in total target
     #    r = 0 : no net change in total target
     #    r > 0 : net gain in total target
@@ -1140,40 +1130,57 @@ def calc_degradation_curve(t_eval: ArrayLike,
     # dT/dt + dBPD.T/dt + dTernary/dt + dT.Ub/dt + dBPD.T.Ub/dt + dTernary.Ub/dt
     rates_at_t = np.apply_along_axis(func1d=kinetic_rates, axis=0, arr=concentrations.y, params=params)
     target_species_rates = np.concatenate((rates_at_t[[2, 4], :], rates_at_t[6:, :]))
-    degradation_rates: NDArray[float] = np.sum(target_species_rates, axis=0)
+
+    degradation_rates: NDArray[float] = pd.Series(np.sum(target_species_rates, axis=0))
     naked_ternary_rates = pd.Series(rates_at_t[6, :])
     poly_ub_target_rates = pd.Series(rates_at_t[6 + params['n'], :]) if params['n'] > 0 else None
     poly_ub_ternary_rates = pd.Series(rates_at_t[-1, :]) if params['n'] > 0 else None
     assert check_target_degradation_rates(
         params=params,
         degradation_from_ode=degradation_rates,
-        total_target=target_totals_over_time,
-        total_poly_ub_target=poly_ub_target_totals_over_time,
-        total_poly_ub_ternary=poly_ub_ternary_totals_over_time
+        total_target=concentrations_df.filter(regex='.*T.*').sum(axis=1),
+        total_poly_ub_target=concentrations_df.filter(regex=f".*T_Ub_{params['n']}").sum(axis=1),
+        total_poly_ub_ternary=concentrations_df[f"Ternary_Ub_{params['n']}"]
     )
 
-    # create result
-    result = pd.DataFrame({
-        't': pd.Series(t_eval),
-        'initial_BPD_ec_conc': initial_BPD_ec_conc,
-        'initial_BPD_ic_conc': initial_BPD_ic_conc,
-        'percent_degradation': degradation,
-        'relative_target': relative_target,
-        'relative_naked_ternary': relative_ternary,
-        'relative_all_ternary': relative_all_ternary,
-        'Dmax': Dmax,
-        'degradation_rate': pd.Series(degradation_rates),
+    # calculate simulation result metrics
+    metrics_df = pd.DataFrame({
+        'percent_degradation': 100 - concentrations_df.filter(regex='.*T.*').sum(axis=1) / total_target_baseline * 100,
+        'relative_target': concentrations_df.filter(regex='.*T.*').sum(axis=1) / total_target_baseline * 100,
+        'relative_naked_ternary': concentrations_df['Ternary'] / total_target_baseline * 100,
+        'relative_all_ternary': concentrations_df.filter(regex='Ternary.*').sum(axis=1) / total_target_baseline * 100,
+        # 'Dmax': Dmax,
+        'degradation_rate': degradation_rates,
         'naked_ternary_rate': naked_ternary_rates,
         'poly_ub_target_rate': poly_ub_target_rates,
         'poly_ub_ternary_rate': poly_ub_ternary_rates,
-        'total_target': target_totals_over_time,
-        'total_target_ub': t_ub_totals_over_time,
-        'total_naked_ternary': ternary_totals_over_time,
-        'total_ternary': all_ternary_totals_over_time,
-        'total_bpd_ic': bpd_totals_over_time,
-        'total_poly_ub_target': poly_ub_target_totals_over_time,
-        'total_poly_ub_ternary': poly_ub_ternary_totals_over_time
+        'total_target': concentrations_df.filter(regex='.*T.*').sum(axis=1),
+        'total_target_ub': concentrations_df.filter(regex='.*T_Ub.*').sum(axis=1),
+        'total_ternary': concentrations_df.filter(regex='Ternary.*').sum(axis=1),
+        'total_bpd_ic': concentrations_df.filter(regex='(^(?!BPD_ec).*BPD.*)|(Ternary.*)').sum(axis=1),
+        'total_poly_ub_target': concentrations_df.filter(regex=f".*T_Ub_{params['n']}").sum(axis=1),
+        'total_poly_ub_ternary': concentrations_df[f"Ternary_Ub_{params['n']}"]
     })
+
+    # target_totals_over_time: pd.Series = concentrations_df.filter(regex='.*T.*').sum(axis=1)
+    # ternary_totals_over_time: pd.Series = concentrations_df['Ternary']  # amounts of naked Ternary
+    # all_ternary_totals_over_time: pd.Series = concentrations_df.filter(regex='Ternary.*').sum(axis=1)
+    #
+    # relative_target: pd.Series = target_totals_over_time / total_target_baseline * 100  # percent total Target relative to baseline total Target
+    # relative_ternary: pd.Series = ternary_totals_over_time / total_target_baseline * 100  # percent naked Ternary relative to baseline total Target
+    # relative_all_ternary: pd.Series = all_ternary_totals_over_time / total_target_baseline * 100  # percent total Ternary relative to baseline total Target
+    #
+    # degradation: pd.Series = 100 - relative_target
+
+    # create simulation metadata DataFrame
+    metadata_df = pd.DataFrame({
+        't': pd.Series(t_eval),
+        'initial_BPD_ec_conc': initial_BPD_ec_conc,
+        'initial_BPD_ic_conc': initial_BPD_ic_conc
+    })
+
+    # create result DataFrame
+    result = pd.concat([metadata_df, concentrations_df, metrics_df], axis=1)
 
     if return_only_final_state:
         return result.iloc[-1:]  # return system state only at final time point
@@ -1307,7 +1314,7 @@ def test_total_species(df: pd.DataFrame, regex: str) -> bool:
     """
     totals: pd.Series[float] = df.filter(regex=regex).sum(axis=1)  # total amounts at time points
     baseline: float = totals.iloc[0]
-    is_success: bool = np.allclose(totals, baseline, rtol=0.01)
+    is_success: bool = np.allclose(totals, baseline, rtol=0.005)
     if not is_success:
         print(totals)
 
@@ -1329,7 +1336,7 @@ def test_total_BPD(df: pd.DataFrame) -> bool:
     bool
         Whether amount of total BPD is consistent over time.
     """
-    return test_total_species(df, regex='.*BPD.*')
+    return test_total_species(df, regex='(.*BPD.*)|(Ternary.*)')
 
 
 def test_total_E3(df) -> bool:
