@@ -18,12 +18,12 @@ bpd_ec = 0.001
 result_id = f'{test_id}_BPD_ec={bpd_ec}_DEG'
 result = pd.read_csv(f"./saved_objects/{result_id}.csv")
 
-result_deg = result[['t', 'PROTAC', 'degradation']]
-result_deg = result_deg.rename(columns={'degradation': 'Degradation'})
+result_deg = result[['t', 'PROTAC', 'relative_target']]
+result_deg = result_deg.rename(columns={'relative_target': 'Degradation'})
 result_deg = result_deg.melt(id_vars=['PROTAC', 't'])
 
-result_ternary = result[['t', 'PROTAC', 'all_Ternary']]
-result_ternary = result_ternary.rename(columns={'all_Ternary': 'Ternary complex'})
+result_ternary = result[['t', 'PROTAC', 'total_ternary']]
+result_ternary = result_ternary.rename(columns={'total_ternary': 'Ternary complex'})
 result_ternary = result_ternary.melt(id_vars=['PROTAC', 't'])
 
 result_rate = result[['t', 'PROTAC', 'degradation_rate']]

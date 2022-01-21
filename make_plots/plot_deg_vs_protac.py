@@ -15,8 +15,8 @@ t_eval = 6
 bpd_ec = 0.001
 
 result = pd.read_csv(f"./saved_objects/{test_id}_t={t_eval}_DEG.csv")
-result = result[['initial_BPD_ec_conc', 'degradation', 'PROTAC']]
-result = result.rename(columns={'degradation': 'Degradation'})
+result = result[['initial_BPD_ec_conc', 'percent_degradation', 'PROTAC']]
+result = result.rename(columns={'percent_degradation': 'Degradation'})
 result = result.melt(id_vars=['PROTAC', 'initial_BPD_ec_conc'])
 
 sns.set_style("ticks")
@@ -36,7 +36,7 @@ plt.xscale('log')
 plt.xlim(result['initial_BPD_ec_conc'].min(), result['initial_BPD_ec_conc'].max())
 plt.xlabel(r'Initial $[PROTAC]_{ec}$ $(\mu M)$')
 plt.ylim(-5, 120)
-plt.ylabel('% Baseline Target Protein')
+plt.ylabel('% Degradation')
 
 plt.title(fr'Target Protein Degradation at $t = {t_eval}h$')
 # handles, labels = ax.get_legend_handles_labels()
