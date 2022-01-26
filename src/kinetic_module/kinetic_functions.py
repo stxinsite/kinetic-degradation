@@ -1076,16 +1076,35 @@ def calc_degradation_curve(t_eval: ArrayLike,
     pd.DataFrame
         Solutions at time points.
 
-        ===================  ========================
-        t                    time point
-        initial_BPD_ec_conc  initial extracellular BPD concentration
-        initial_BPD_ic_conc  initial intracellular BPD concentration
-        degradation          percent target protein degradation relative to baseline total Target
-        Ternary              percent naked ternary complex formation relative to baseline total Target
-        all_Ternary          percent all ternary complex formation relative to baseline total Target
-        Dmax                 percent maximal target protein degradation relative to baseline total Target
-        ===================  ========================
-
+        ======================  ==============================================================================
+        t                       time point
+        initial_BPD_ec_conc     initial extracellular PROTAC concentration
+        initial_BPD_ic_conc     initial intracellular PROTAC concentration
+        BPD_ec                  extracellular PROTAC amount
+        BPD_ic                  intracellular unbound PROTAC amount
+        T                       unbound target amount
+        E3                      unbound E3 amount
+        BPD_T                   target-PROTAC binary complex amount
+        BPD_E3                  E3-PROTAC binary complex amount
+        Ternary                 ternary complex amount
+        T_Ub_<i>                i-ubiquitinated target amount
+        BPD_T_Ub_<i>            i-ubiquitinated target-PROTAC binary complex amount
+        Ternary_Ub_<i>          i-ubiquitinated ternary complex amount
+        percent_degradation     percent degradation relative to baseline target amount
+        relative_target         percent total target relative to baseline target amount
+        relative_naked_ternary  percent un-ubiquitinated ternary complex relative to baseline target amount
+        relative_all_ternary    percent all ternary complex relative to baseline target amount
+        degradation_rate        rate of change in total target
+        naked_ternary_rate      rate of change in un-ubiquitinated ternary complex
+        poly_ub_target_rate     rate of change in fully ubiquitinated target and target-PROTAC binary complex
+        poly_ub_ternary_rate    rate of change in fully ubiquitinated ternary complex
+        total_target            total target amount
+        total_target_ub         total ubiquitinated target and target-PROTAC binary complex amount
+        total_ternary           total ternary complex amount
+        total_bpd_ic            total intracellular PROTAC (including complexes) amount
+        total_poly_ub_target    total fully ubiquitinated target and target-PROTAC binary complex amount
+        total_poly_ub_ternary   total fully ubiquitinated ternary complex amount
+        ======================  ==============================================================================
     """
 
     # initial values
@@ -1128,12 +1147,18 @@ def calc_degradation_curve(t_eval: ArrayLike,
     #    r > 0 : net gain in total target
     # net change in total target is the sum of rates of all species containing target
     # dT/dt + dBPD.T/dt + dTernary/dt + dT.Ub/dt + dBPD.T.Ub/dt + dTernary.Ub/dt
-    rates_at_t = np.apply_along_axis(func1d=kinetic_rates, axis=0, arr=concentrations.y, params=params)
-    target_species_rates = np.concatenate((rates_at_t[[2, 4], :], rates_at_t[6:, :]))
 
-    degradation_rates: NDArray[float] = pd.Series(np.sum(target_species_rates, axis=0))
+    # reminder: `y` object from solve_ivp() result is an array where rows: species and cols: time
+    rates_at_t = np.apply_along_axis(func1d=kinetic_rates, axis=0, arr=concentrations.y, params=params)
+    # select and concatenate the rows for species that involve target
+    target_species_rates = np.concatenate((rates_at_t[[2, 4], :], rates_at_t[6:, :]))
+    # sum the rates of change for species involving target at each time point
+    degradation_rates = pd.Series(np.sum(target_species_rates, axis=0))
+    # select the row for rate of change in un-ubiquitinated ternary complex
     naked_ternary_rates = pd.Series(rates_at_t[6, :])
-    poly_ub_target_rates = pd.Series(rates_at_t[6 + params['n'], :]) if params['n'] > 0 else None
+    # select and sum the rows for rates of change in fully ubiquitinated target and target-PROTAC at each time point
+    poly_ub_target_rates = pd.Series(np.sum(rates_at_t[[6 + params['n'], 6 + 2 * params['n']], :], axis=0)) if params['n'] > 0 else None
+    # select the row for rate of change in fully ubiquitinated ternary complex
     poly_ub_ternary_rates = pd.Series(rates_at_t[-1, :]) if params['n'] > 0 else None
     assert check_target_degradation_rates(
         params=params,
