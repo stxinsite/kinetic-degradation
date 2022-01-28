@@ -508,8 +508,7 @@ def dTernary_Ubdt(Ternary_Ub_consec_pair: NDArray[np.float64],
             + params['kon_T_ternary'] * BPD_E3 * T_Ub_i / params['Vic']
             + params['kon_E3_ternary'] * BPD_T_Ub_i * E3 / params['Vic']
             - (params['kdeg_T'] + params['koff_T_ternary'] + params['koff_E3_ternary']) * Ternary_Ub_consec_pair[1]
-            - params['kub'] * (0 if i == params['n'] else Ternary_Ub_consec_pair[1])
-            - params['kdeg_Ternary'] * (Ternary_Ub_consec_pair[1] if i == params['n'] else 0)
+            - (params['kdeg_Ternary'] if i == params['n'] else params['kub']) * Ternary_Ub_consec_pair[1]
     )
 
 
@@ -609,35 +608,36 @@ def jac_kinetic_rates(y: NDArray[np.float64], params: dict[str, float]) -> NDArr
     Ub_species = np.array_split(y[7:], 3)
     T_Ubs, BPD_T_Ubs, Ternary_Ubs = Ub_species[0], Ub_species[1], Ub_species[2]
 
-    n_Ub_species = len(y[7:])
+    n_Ub_species = len(y[7:]) # total number of ubiquitinated species
+
     # n_T_Ubs = n_BPD_T_Ubs = n_Ternary_Ubs
-    # variable names may help explain indices of Jacobian values
+    # the different variable names may help explain indices of Jacobian values
     n_T_Ubs = len(T_Ubs)
     n_BPD_T_Ubs = len(BPD_T_Ubs)
     n_Ternary_Ubs = len(Ternary_Ubs)
 
+    # dBPD_ec/dt doesn't depend on T, E3, BPD_T, BPD_E3, Ternary, T_Ubs, BPD_T_Ubs, Ternary_Ubs
     dBPD_ecdtdy = (
             [
-                - params['PS_cell'] * params['num_cells'] * params['fu_ec'] / params['Vec'],
+                -params['PS_cell'] * params['num_cells'] * params['fu_ec'] / params['Vec'],
                 params['PS_cell'] * params['num_cells'] * params['fu_ic'] / params['Vic']
             ]
             + [0] * (5 + n_Ub_species)
-    # dBPD_ec/dt doesn't depend on T, E3, BPD_T, BPD_E3, Ternary, T_Ubs, BPD_T_Ubs, Ternary_Ubs
     )
 
     dBPD_icdtdy = (
             [
                 params['PS_cell'] * params['fu_ec'] / params['Vec'],
-                - params['PS_cell'] * params['fu_ic'] / params['Vic']
+                -params['PS_cell'] * params['fu_ic'] / params['Vic']
                 - params['kon_T_binary'] * params['fu_ic'] * (T + np.sum(T_Ubs)) / params['Vic']
                 - params['kon_E3_binary'] * params['fu_ic'] * E3 / params['Vic'],
-                - params['kon_T_binary'] * params['fu_ic'] * BPD_ic / params['Vic'],
-                - params['kon_E3_binary'] * params['fu_ic'] * BPD_ic / params['Vic'],
+                -params['kon_T_binary'] * params['fu_ic'] * BPD_ic / params['Vic'],
+                -params['kon_E3_binary'] * params['fu_ic'] * BPD_ic / params['Vic'],
                 params['koff_T_binary'] + params['kdeg_T'],
                 params['koff_E3_binary'],
                 0
             ]
-            + [- params['kon_T_binary'] * params['fu_ic'] * BPD_ic / params['Vic']] * n_T_Ubs
+            + [-params['kon_T_binary'] * params['fu_ic'] * BPD_ic / params['Vic']] * n_T_Ubs
             + [params['koff_T_binary'] + params['kdeg_T']] * (n_BPD_T_Ubs - 1)
             + [params['koff_T_binary'] + params['kdeg_T'] + params['kdeg_UPS']] * (1 if n_BPD_T_Ubs else 0)
             + [0] * n_Ternary_Ubs  # dBPD_ic/dt does not depend on Ternary_Ubs
@@ -646,13 +646,13 @@ def jac_kinetic_rates(y: NDArray[np.float64], params: dict[str, float]) -> NDArr
     dTargetdtdy = (
             [
                 0,
-                - params['kon_T_binary'] * params['fu_ic'] * T / params['Vic'],
-                - params['kdeg_T']
+                -params['kon_T_binary'] * params['fu_ic'] * T / params['Vic'],
+                -params['kdeg_T']
                 - params['kon_T_binary'] * params['fu_ic'] * BPD_ic / params['Vic']
                 - params['kon_T_ternary'] * BPD_E3 / params['Vic'],
                 0,
                 params['koff_T_binary'],
-                - params['kon_T_ternary'] * T / params['Vic'],
+                -params['kon_T_ternary'] * T / params['Vic'],
                 params['koff_T_ternary']
             ]
             + [params['kde_ub']] * (1 if n_T_Ubs else 0)
@@ -663,16 +663,16 @@ def jac_kinetic_rates(y: NDArray[np.float64], params: dict[str, float]) -> NDArr
     dE3dtdy = (
             [
                 0,
-                - params['kon_E3_binary'] * params['fu_ic'] * E3 / params['Vic'],
+                -params['kon_E3_binary'] * params['fu_ic'] * E3 / params['Vic'],
                 0,
-                - params['kon_E3_binary'] * params['fu_ic'] * BPD_ic / params['Vic']
+                -params['kon_E3_binary'] * params['fu_ic'] * BPD_ic / params['Vic']
                 - params['kon_E3_ternary'] * (BPD_T + np.sum(BPD_T_Ubs)) / params['Vic'],
-                - params['kon_E3_ternary'] * E3 / params['Vic'],
+                -params['kon_E3_ternary'] * E3 / params['Vic'],
                 params['koff_E3_binary'],
                 params['koff_E3_ternary']
             ]
             + [0] * n_T_Ubs
-            + [- params['kon_E3_ternary'] * E3 / params['Vic']] * n_BPD_T_Ubs
+            + [-params['kon_E3_ternary'] * E3 / params['Vic']] * n_BPD_T_Ubs
             + [params['koff_E3_ternary']] * n_Ternary_Ubs
     )
 
@@ -681,8 +681,8 @@ def jac_kinetic_rates(y: NDArray[np.float64], params: dict[str, float]) -> NDArr
                 0,
                 params['kon_T_binary'] * params['fu_ic'] * T / params['Vic'],
                 params['kon_T_binary'] * params['fu_ic'] * BPD_ic / params['Vic'],
-                - params['kon_E3_ternary'] * BPD_T / params['Vic'],
-                - (params['koff_T_binary'] + params['kdeg_T'])
+                -params['kon_E3_ternary'] * BPD_T / params['Vic'],
+                -(params['koff_T_binary'] + params['kdeg_T'])
                 - params['kon_E3_ternary'] * E3 / params['Vic'],
                 0,
                 params['koff_E3_ternary']
@@ -697,14 +697,14 @@ def jac_kinetic_rates(y: NDArray[np.float64], params: dict[str, float]) -> NDArr
             [
                 0,
                 params['kon_E3_binary'] * params['fu_ic'] * E3 / params['Vic'],
-                - params['kon_T_ternary'] * BPD_E3 / params['Vic'],
+                -params['kon_T_ternary'] * BPD_E3 / params['Vic'],
                 params['kon_E3_binary'] * params['fu_ic'] * BPD_ic / params['Vic'],
                 0,
-                - params['koff_E3_binary']
+                -params['koff_E3_binary']
                 - params['kon_T_ternary'] * (T + np.sum(T_Ubs)) / params['Vic'],
                 params['koff_T_ternary'] + params['kdeg_T']
             ]
-            + [- params['kon_T_ternary'] * BPD_E3 / params['Vic']] * n_T_Ubs
+            + [-params['kon_T_ternary'] * BPD_E3 / params['Vic']] * n_T_Ubs
             + [0] * n_BPD_T_Ubs
             + [params['koff_T_ternary'] + params['kdeg_T']] * (n_Ternary_Ubs - 1)
             + [params['koff_T_ternary'] + params['kdeg_T'] + params['kdeg_Ternary']] * (1 if n_Ternary_Ubs else 0)
@@ -718,7 +718,7 @@ def jac_kinetic_rates(y: NDArray[np.float64], params: dict[str, float]) -> NDArr
                 params['kon_E3_ternary'] * BPD_T / params['Vic'],
                 params['kon_E3_ternary'] * E3 / params['Vic'],
                 params['kon_T_ternary'] * T / params['Vic'],
-                - (params['kdeg_T'] + params['koff_T_ternary'] + params['koff_E3_ternary'] + params['kub'])
+                -(params['kdeg_T'] + params['koff_T_ternary'] + params['koff_E3_ternary'] + params['kub'])
             ]
             + [0] * n_Ub_species  # dTernary/dt doesn't depend on T_Ubs, BPD_T_Ubs, Ternary_Ubs
     )
@@ -727,17 +727,17 @@ def jac_kinetic_rates(y: NDArray[np.float64], params: dict[str, float]) -> NDArr
     dBPD_T_Ubdtdy_all = []  # initialize empty list for (dBPD_T_Ub/dt) / dy
     dTernary_Ubdtdy_all = []  # initialize empty list for (dTernary_Ub/dt) / dy
     if params['n'] > 0:
-        # there are ubiquitination steps
-        for i in range(params['n']):  # for each ternary complex ubiquitination step
+        # if there are ubiquitination steps
+        for i in range(params['n']):  # for each ubiquitination step
             # initalize list of zeros for (dUb.i/dt) / dy
             dT_Ubdtdy = [0] * (7 + n_Ub_species)
             dBPD_T_Ubdtdy = [0] * (7 + n_Ub_species)
             dTernary_Ub_idtdy = [0] * (7 + n_Ub_species)
 
-            dT_Ubdtdy[1] = - params['kon_T_binary'] * params['fu_ic'] * T_Ubs[i] / params['Vic']  # (dT.Ubi/dt) / dBPD_ic
-            dT_Ubdtdy[5] = - params['kon_T_ternary'] * T_Ubs[i] / params['Vic']  # (dT.Ubi/dt) / dBPD_E3
+            dT_Ubdtdy[1] = -params['kon_T_binary'] * params['fu_ic'] * T_Ubs[i] / params['Vic']  # (dT.Ubi/dt) / dBPD_ic
+            dT_Ubdtdy[5] = -params['kon_T_ternary'] * T_Ubs[i] / params['Vic']  # (dT.Ubi/dt) / dBPD_E3
             dT_Ubdtdy[7 + i] = (
-                    - (params['kde_ub'] + params['kdeg_T'])
+                    -(params['kde_ub'] + params['kdeg_T'])
                     - params['kon_T_binary'] * params['fu_ic'] * BPD_ic / params['Vic']
                     - params['kon_T_ternary'] * BPD_E3 / params['Vic']
                     - (params['kdeg_UPS'] if i == (n_T_Ubs - 1) else 0)
@@ -749,11 +749,10 @@ def jac_kinetic_rates(y: NDArray[np.float64], params: dict[str, float]) -> NDArr
             dT_Ubdtdy[7 + n_T_Ubs + n_BPD_T_Ubs + i] = params['koff_T_ternary']  # (dT.Ubi/dt) / dTernary.Ubi
 
             dBPD_T_Ubdtdy[1] = params['kon_T_binary'] * params['fu_ic'] * T_Ubs[i] / params['Vic']  # (dBPD.T.Ubi/dt) / dBPD_ic
-            dBPD_T_Ubdtdy[3] = - params['kon_E3_ternary'] * BPD_T_Ubs[i] / params['Vic']  # (dBPD.T.Ubi/dt) / dE3
+            dBPD_T_Ubdtdy[3] = -params['kon_E3_ternary'] * BPD_T_Ubs[i] / params['Vic']  # (dBPD.T.Ubi/dt) / dE3
             dBPD_T_Ubdtdy[7 + i] = params['kon_T_binary'] * params['fu_ic'] * BPD_ic / params['Vic']  # (dBPD.T.Ubi/dt) / dT.Ubi
             dBPD_T_Ubdtdy[7 + n_T_Ubs + i] = (
-                    - (params['kde_ub'] + params['kdeg_T'])
-                    - params['koff_T_binary']
+                    -(params['kde_ub'] + params['kdeg_T'] + params['koff_T_binary'])
                     - params['kon_E3_ternary'] * E3 / params['Vic']
                     - (params['kdeg_UPS'] if i == (n_BPD_T_Ubs - 1) else 0)
             )  # (dBPD.T.Ubi/dt) / dBPD.T.Ubi
@@ -772,9 +771,8 @@ def jac_kinetic_rates(y: NDArray[np.float64], params: dict[str, float]) -> NDArr
                 dTernary_Ub_idtdy[7 + n_T_Ubs + n_BPD_T_Ubs + i - 1] = params['kub']  # (dTernary_Ub_i/dt) / dTernary_Ub_<i-1>
 
             dTernary_Ub_idtdy[7 + n_T_Ubs + n_BPD_T_Ubs + i] = (
-                    - (params['kdeg_T'] + params['koff_T_ternary'] + params['koff_E3_ternary'])
-                    - (0 if i == (n_Ternary_Ubs - 1) else params['kub'])
-                    - (params['kdeg_Ternary'] if i == (n_Ternary_Ubs - 1) else 0)
+                    -(params['kdeg_T'] + params['koff_T_ternary'] + params['koff_E3_ternary'])
+                    - (params['kdeg_Ternary'] if i == (n_Ternary_Ubs - 1) else params['kub'])
             )  # (dTernary_Ub_i/dt) / dTernary_Ub_i
 
             dT_Ubdtdy_all.append(dT_Ubdtdy)
@@ -1245,7 +1243,7 @@ def check_target_degradation_rates(params: dict[str, float],
         - params['kdeg_Ternary'] * total_poly_ub_ternary
     )
 
-    return np.allclose(degradation_from_ode, degradation_from_sim)
+    return np.allclose(a=degradation_from_ode, b=degradation_from_sim, atol=0, rtol=0.001)
 
 
 """
@@ -1338,8 +1336,8 @@ def test_total_species(df: pd.DataFrame, regex: str) -> bool:
         Whether amount of subset of species is consistent over time.
     """
     totals: pd.Series[float] = df.filter(regex=regex).sum(axis=1)  # total amounts at time points
-    baseline: float = totals.iloc[0]
-    is_success: bool = np.allclose(totals, baseline, rtol=0.005)
+    baseline: float = totals.iloc[0]  # baseline initial value
+    is_success: bool = np.allclose(a=totals, b=baseline, atol=0, rtol=0.001)
     if not is_success:
         print(totals)
 
@@ -1349,7 +1347,7 @@ def test_total_species(df: pd.DataFrame, regex: str) -> bool:
 def test_total_BPD(df: pd.DataFrame) -> bool:
     """Tests consistency of total BPD.
 
-    Total BPD amount should remain consistent over time without pharmacokinetics.
+    Total BPD amount ({extra,intra}cellular) should remain consistent over time without pharmacokinetics.
 
     Parameters
     ----------
@@ -1379,7 +1377,7 @@ def test_total_E3(df) -> bool:
     bool
         Whether amount of total E3 is consistent over time.
     """
-    return test_total_species(df, regex='.*E3.*')
+    return test_total_species(df, regex='(.*E3.*)|(Ternary.*)')
 
 
 def passes_unit_tests(df: pd.DataFrame) -> bool:
