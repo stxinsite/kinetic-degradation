@@ -12,10 +12,14 @@ if __name__ == '__main__':
     protac_ids = ['PROTAC 1', 'ACBI1']
     test_id = 'PROTAC1&ACBI1'
 
+    # config_files = ['SiTX_38406_config.yml']
+    # protac_ids = ['ACBI1']
+    # test_id = 'ACBI1'
+
     """Fixed initial intracellular BPD concentration
     over a range of time points.
     """
-    t_eval = np.linspace(0, 1, num=100)
+    t_eval = np.linspace(0, 24, num=100)
     initial_BPD_conc = 0.001
 
     result = kt.run_kinetic_model(
@@ -25,4 +29,4 @@ if __name__ == '__main__':
         initial_BPD_ec_concs=initial_BPD_conc,
         return_only_final_state=False
     )
-    result.to_csv(f"./saved_objects/{test_id}_bpd_ec={initial_BPD_conc}_t={np.max(t_eval)}_DEG.csv", index=False)
+    result.to_csv(f"./saved_objects/{test_id}_bpd_ec={initial_BPD_conc}_t={int(np.max(t_eval))}.csv", index=False)

@@ -7,7 +7,7 @@ if __name__ == '__main__':
     config_filename = 'SiTX_38406_config.yml'
     protac_id = 'ACBI1'
 
-    t_eval = 24  # time point at which to calculate
+    t_eval = 6  # time point at which to calculate
     initial_BPD_ec_conc = 0.001  # initial concentrations of BPD_ec (uM)
 
     test_id = protac_id.replace(" ", "") + f"_bpd_ec={initial_BPD_ec_conc}_t={t_eval}"
@@ -23,4 +23,4 @@ if __name__ == '__main__':
         initial_target_conc_range=initial_target_conc_range,
         initial_BPD_ec_conc=initial_BPD_ec_conc
     )
-    result.to_csv(f"./saved_objects/{test_id}_kprod_vs_alpha_DEG.csv", index=False)  # save dataframe
+    result.to_csv(f"./saved_objects/{test_id}_kprod_vs_alpha.csv", index=False)  # save dataframe

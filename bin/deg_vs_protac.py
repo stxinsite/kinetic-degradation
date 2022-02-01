@@ -25,4 +25,4 @@ if __name__ == '__main__':
         initial_BPD_ec_concs=initial_BPD_ec_concs,
         return_only_final_state=True
     )
-    result.to_csv(f"./saved_objects/{test_id}_t={t_eval}_DEG.csv", index=False)
+    result.to_csv(f"./saved_objects/{test_id}_target=1_e3=0.1_t={t_eval}.csv", index=False)

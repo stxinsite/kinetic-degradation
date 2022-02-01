@@ -5,17 +5,19 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-plt.rcParams["axes.labelsize"] = 20
-plt.rcParams["axes.titlesize"] = 20
+plt.rcParams["axes.labelsize"] = 12
+plt.rcParams["axes.titlesize"] = 15
 plt.rcParams["figure.titlesize"] = 20
-plt.rcParams["figure.figsize"] = (10, 7)
+plt.rcParams["figure.figsize"] = (4, 3.5)
 
 protac_ids = ['PROTAC 1', 'ACBI1']
 test_id = '&'.join(protac_ids)
 test_id = test_id.replace(" ", "")
+# test_id = 'ACBI1'
 bpd_ec = 0.001
+t = 24
 
-result_id = f'{test_id}_BPD_ec={bpd_ec}_DEG'
+result_id = f'{test_id}_bpd_ec={bpd_ec}_t={t}'
 result = pd.read_csv(f"./saved_objects/{result_id}.csv")
 
 result_deg = result[['t', 'PROTAC', 'relative_target']]
@@ -40,34 +42,36 @@ sns.lineplot(
     y='value',
     hue='PROTAC',
     palette='Set2',
+    linewidth=2,
     ax=ax
 )
 ax.set_xlabel('Time (h)')
 ax.set_xlim(result_deg['t'].min(), result_deg['t'].max())
+ax.set_xticks(ticks=np.arange(start=0, stop=result_deg['t'].max() + 1, step=4, dtype=int))
 ax.set_ylabel('% Baseline Target Protein')
-ax.set_ylim(-5, 120)
-ax.tick_params(labelsize=15, direction='in')
-ax.legend(loc="upper left")
+ax.set_ylim(0, 120)
+ax.tick_params(labelsize=12, direction='in')
+ax.legend(loc="upper right", borderaxespad=0.25)
 
-ax2 = ax.twinx()
-sns.lineplot(
-    data=result_ternary,
-    x='t',
-    y='value',
-    hue='PROTAC',
-    linestyle='--',
-    palette='Set2',
-    ax=ax2,
-    legend=False
-)
-ax2.set_ylabel('Ternary complex formation (umol)')
-ax2.set_ylim(0, result_ternary['value'].max() * 2.5)
-ax2.tick_params(labelsize=15, direction='in')
+# ax2 = ax.twinx()
+# sns.lineplot(
+#     data=result_ternary,
+#     x='t',
+#     y='value',
+#     hue='PROTAC',
+#     linestyle='--',
+#     palette='Set2',
+#     ax=ax2,
+#     legend=False
+# )
+# ax2.set_ylabel('Ternary complex formation (umol)')
+# ax2.set_ylim(0, result_ternary['value'].max() * 2.5)
+# ax2.tick_params(labelsize=15, direction='in')
 
-plt.title(r'Target Protein Degradation with initial $[PROTAC]_{ec} = 1$ nM', y=1.05)
-plt.setp(ax.get_legend().get_texts(), fontsize='15')  # for legend text
-plt.setp(ax.get_legend().get_title(), fontsize='15')  # for legend title
-plt.savefig(f"./plots/{result_id}.png", bbox_inches="tight")
+# plt.title(r'Target Protein Degradation with initial $[PROTAC]_{ec} = 1$ nM', y=1.05)
+plt.setp(ax.get_legend().get_texts(), fontsize='8')  # for legend text
+# plt.setp(ax.get_legend().get_title(), fontsize='15')  # for legend title
+plt.savefig(f"./plots/{result_id}.png", bbox_inches="tight", dpi=1200)
 
 """Species totals over time."""
 # result = pd.read_csv(f"./saved_objects/{result_id}.csv")

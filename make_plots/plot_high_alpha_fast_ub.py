@@ -16,6 +16,22 @@ k_ub = 5000
 result_id = f"{protac_id}_BPD_ec={bpd_ec}_high_alpha_fast_ub_DEG"
 result = pd.read_csv(f"./saved_objects/{result_id}.csv")
 
+deg_result = pd.DataFrame({
+    't': result.t,
+    'not_poly_ub_target': result.total_target - result.total_poly_ub_target - result.total_poly_ub_ternary,
+    'total_poly_ub_target': result.total_poly_ub_target,
+    'total_poly_ub_ternary': result.total_poly_ub_ternary
+})
+deg_result = deg_result.melt(id_vars=['t'])
+
+sns.set_style('whitegrid')
+sns.lineplot(data=deg_result, x='t', y='value', hue='variable', palette='Set2', )
+plt.xlabel('Time (h)')
+plt.ylabel('Amount (umol)')
+plt.title(fr'Initial $[{protac_id}] = {bpd_ec}\mu$M, $\alpha = {alpha}$, ' + r'$k_{ub}$' + fr'$= {k_ub}/h$')
+plt.xticks(np.arange(start=0, stop=25, step=4))
+plt.show()
+
 important_result = result[['t',
                            'total_target',
                            'total_naked_ternary',
@@ -30,7 +46,7 @@ p = sns.lineplot(data=important_result, x='t', y='value', hue='variable', palett
 q = sns.lineplot(data=important_result, x='t', y='value', hue='variable', palette='Set2', ax=ax2)
 # limit the view to different portions of data
 ax1.set_ylim(0, 4.5e-13)
-ax2.set_ylim(0, 2.5e-14)
+ax2.set_ylim(0, 4.5e-15) #2.5e-14)
 # hide labels
 ax1.set(ylabel=None, xlabel=None)
 ax2.set(ylabel=None, xlabel=None)

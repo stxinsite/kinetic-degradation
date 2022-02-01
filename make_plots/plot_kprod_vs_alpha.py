@@ -3,15 +3,15 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-plt.rcParams["axes.labelsize"] = 20
-plt.rcParams["axes.titlesize"] = 20
+plt.rcParams["axes.labelsize"] = 12
+plt.rcParams["axes.titlesize"] = 15
 plt.rcParams["figure.titlesize"] = 20
-plt.rcParams["figure.figsize"] = (10,7)
+plt.rcParams["figure.figsize"] = (4, 3.5)
 
 protac_id = 'ACBI1'
-t = 24
+t = 6
 bpd_ec = 0.001
-result_id = f"{protac_id}_bpd_ec={bpd_ec}_t={t}_kprod_vs_alpha_DEG"
+result_id = f"{protac_id}_bpd_ec={bpd_ec}_t={t}_kprod_vs_alpha"
 
 result = pd.read_csv(f"./saved_objects/{result_id}.csv")
 alpha_range = result['alpha'].unique()
@@ -33,26 +33,29 @@ p = sns.lineplot(
     hue='Conc_T_base',
     style='variable',
     palette='Set2',
-    linewidth=3,
+    linewidth=2,
     ax=ax
 )
-p.tick_params(labelsize=15)
+# p.tick_params(labelsize=15)
 plt.xscale('log')
 plt.xlim(alpha_range.min(), alpha_range.max())
-plt.ylim(-5, 120)
+plt.ylim(0, 120)
 plt.xlabel(r'Cooperativity $\alpha$')
 plt.ylabel('% Baseline Target Protein')
-plt.title(
-    f"Target Protein Degradation with [{protac_id}]"
-    + r"$_{ec} = $"
-    + fr"${bpd_ec}\mu$M at $t = {int(t)}h$"
-)
+# plt.title(
+#     f"Target Protein Degradation with [{protac_id}]"
+#     + r"$_{ec} = $"
+#     + fr"${bpd_ec}\mu$M at $t = {int(t)}h$"
+# )
 handles, labels = ax.get_legend_handles_labels()
 labels[0] = "Initial [Target]"
 for i in range(1,5):
-    labels[i] += " uM"
-labels[5] = "\n"
-ax.legend(handles=handles, labels=labels, bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0)
-plt.setp(ax.get_legend().get_texts(), fontsize='15')  # for legend text
-plt.setp(ax.get_legend().get_title(), fontsize='15')  # for legend title
-plt.savefig(f"plots/{result_id}.png", bbox_inches="tight")
+    target_conc = float(labels[i])
+    if target_conc.is_integer():
+        target_conc = int(target_conc)
+    labels[i] = str(target_conc) + " uM"
+labels[5] = ""
+ax.legend(handles=handles, labels=labels, loc='lower left', borderaxespad=0.25)
+plt.setp(ax.get_legend().get_texts(), fontsize='8')  # for legend text
+# plt.setp(ax.get_legend().get_title(), fontsize='15')  # for legend title
+plt.savefig(f"plots/{result_id}.png", bbox_inches="tight", dpi=1200)
