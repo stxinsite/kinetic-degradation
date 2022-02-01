@@ -14,12 +14,12 @@ koff_E3_ternary: null
 n: 4
 kub: 5000
 kde_ub: 180
-kdeg_UPS: 360
+kdeg_UPS: 3.6 # 360
 kdeg_Ternary: 0
 fu_ec: 1
 fu_ic: 1
 PS_cell: 2.49e-11
-kdeg_T: 0.1
+kdeg_T: 0 # 0.1
 Conc_T_base: 0.1
 Conc_E3_base: 0.1
 num_cells: 5.0e+3
