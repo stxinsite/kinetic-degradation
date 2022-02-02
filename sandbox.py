@@ -4,6 +4,21 @@ import yaml
 import src.kinetic_module.kinetic_functions as kf
 from src.kinetic_module.calc_full_config import KineticParameters
 
+def boo(sound: str):
+    """A function that makes a sound.
+
+    Parameters
+    ----------
+    sound : str
+        A sound.
+
+    Returns
+    -------
+    str
+        A loud sound.
+    """ 
+    return f"{sound}!"
+
 with open(f"./data/SiTX_38406_config.yml") as file:
     params = yaml.safe_load(file)  # load original config
 
