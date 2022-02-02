@@ -1,5 +1,7 @@
 # Introduction
 
+Date last updated: 2/2/2022
+
 This repo implements a kinetic proofreading model of protein degradation via the ubiquitin-proteasome system (UPS) motivated by the work of Bartlett et al. (2020)<sup>[1](#bartlett)</sup>. Given an initial state of species amounts, 
 this repo can perform the following functions:
 - solve a system of ODEs for the system state over time
