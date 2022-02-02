@@ -95,7 +95,8 @@ r = sns.lineplot(
 )
 
 # y-axis settings
-ax3.set_ylim(bottom=0)
+ax3.set_ylim(bottom=result_protac['value'].min(), top=result_protac['value'].max())
+ax3.set_yscale('log')
 ax3.set_ylabel('Total Intracellular PROTAC (uM)')
 
 # legend
