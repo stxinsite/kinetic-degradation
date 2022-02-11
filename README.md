@@ -1,10 +1,14 @@
 # Introduction
 
+Date last updated: 2/2/2022
+
 This repo implements a kinetic proofreading model of protein degradation via the ubiquitin-proteasome system (UPS) motivated by the work of Bartlett et al. (2020)<sup>[1](#bartlett)</sup>. Given an initial state of species amounts, 
 this repo can perform the following functions:
 - solve a system of ODEs for the system state over time
 - calculate target protein degradation, ternary complex formation, Dmax (percent maximum degradation)
-- compute species totals over time 
+- compute species totals over time
+
+For mathematical details, see technical document [here](https://www.overleaf.com/read/zmcpqnbknhqs).
 
 ## Prerequisites
 
@@ -77,7 +81,7 @@ The config file must contain the following keys (with units in parentheses):
   - fu_ec: fraction unbound extracellular BPD
   - fu_ic: fraction unbound intracellular BPD
   - PS_cell (L/h): permeability-surface area product
-  - kprod_T (umol/h): intrinsic target protein production rate (Conc_T_base * Vic * kdeg_T)
+  - kprod_T (umol/h): [Optional] intrinsic target protein production rate. Will be calculated and set to Conc_T_base * Vic * kdeg_T
   - kdeg_T (1/h): intrinsic target protein degradation rate
   - Conc_T_base (uM): baseline target protein concentration
   - Conc_E3_base (uM): baseline E3 concentration
