@@ -4,11 +4,12 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 
-plt.rcParams["axes.labelsize"] = 12
-plt.rcParams["axes.titlesize"] = 15
-plt.rcParams["figure.titlesize"] = 20
-plt.rcParams["figure.figsize"] = (4, 3.5)
+plt.rcParams["axes.labelsize"] = 14
+plt.rcParams["xtick.labelsize"] = 12
+plt.rcParams["ytick.labelsize"] = 12
+plt.rcParams["figure.figsize"] = (3, 6)
 
 protac_ids = ['PROTAC 1', 'ACBI1']
 test_id = '&'.join(protac_ids)
@@ -24,18 +25,27 @@ result_deg = result[['t', 'PROTAC', 'relative_target']]
 result_deg = result_deg.rename(columns={'relative_target': 'Degradation'})
 result_deg = result_deg.melt(id_vars=['PROTAC', 't'])
 
-result_ternary = result[['t', 'PROTAC', 'total_ternary']]
-result_ternary = result_ternary.rename(columns={'total_ternary': 'Ternary complex'})
-result_ternary = result_ternary.melt(id_vars=['PROTAC', 't'])
+result_species = result[['t', 'PROTAC', 'total_target', 'total_ternary', 'total_poly_ub_target']]
+result_species = result_species.assign(percent_ternary=lambda df: df.total_ternary / df.total_target * 100,
+                                       percent_poly_ub_target=lambda df: df.total_poly_ub_target / df.total_target * 100)
+result_species = result_species.rename(columns={'percent_ternary': 'Ternary complex',
+                                                'percent_poly_ub_target': 'Free poly-ubiquitinated target'})
+result_species = result_species.melt(id_vars=['PROTAC', 't'], value_vars=['Ternary complex', 'Free poly-ubiquitinated target'])
 
 result_rate = result[['t', 'PROTAC', 'degradation_rate']]
 result_rate = result_rate.rename(columns={'degradation_rate': 'Degradation rate'})
 result_rate = result_rate.melt(id_vars=['PROTAC', 't'])
 
-"""Degradation over time."""
+result_protac = result[['t', 'PROTAC', 'total_bpd_ic', 'BPD_ec']]
+result_protac = result_protac.assign(total_bpd=lambda df: df.total_bpd_ic * 5000 + df.BPD_ec)
+
 sns.set_style("ticks")
 
-fig, ax = plt.subplots()
+"""Degradation over time."""
+
+fig, (ax, ax2) = plt.subplots(2, 1, sharex='all')
+
+# degradation vs. time
 sns.lineplot(
     data=result_deg,
     x='t',
@@ -45,33 +55,70 @@ sns.lineplot(
     linewidth=2,
     ax=ax
 )
-ax.set_xlabel('Time (h)')
-ax.set_xlim(result_deg['t'].min(), result_deg['t'].max())
-ax.set_xticks(ticks=np.arange(start=0, stop=result_deg['t'].max() + 1, step=4, dtype=int))
+
+# y-axis settings
 ax.set_ylabel('% Baseline Target Protein')
 ax.set_ylim(0, 120)
+
+# legend
+ax.legend(loc="upper right", borderaxespad=0.25, fontsize='10')
+
+# species vs. time
+sns.lineplot(
+    data=result_species,
+    x='t',
+    y='value',
+    hue='PROTAC',
+    style='variable',
+    palette='Set2',
+    ax=ax2,
+    legend=False
+)
+
+# y-axis settings
+ax2.set_ylabel('% Target Occupancy', labelpad=15)
+ax2.set_ylim(bottom=0, top=6)
+ax2.set_yticks(ticks=range(6))
+
+# ticks
 ax.tick_params(labelsize=12, direction='in')
-ax.legend(loc="upper right", borderaxespad=0.25)
+ax2.tick_params(labelsize=12, direction='in')
 
-# ax2 = ax.twinx()
+legend_handles = [Line2D([0], [0], ls='-', label=r'$\sum_{i=0}^4 T_i\cdot P\cdot E3$', color='black'),
+                  Line2D([0], [0], ls='--', label=r'$T_4 + T_4\cdot P$', color='black')]
+ax2.legend(handles=legend_handles, title="", loc='upper right', borderaxespad=0.25,
+           fontsize='10')
+
+# x-axis settings
+ax2.set_xlabel('Time (h)')
+plt.xlim(result_deg['t'].min(), result_deg['t'].max())
+plt.xticks(ticks=np.arange(start=0, stop=result_deg['t'].max() + 1, step=4, dtype=int))
+
+plt.subplots_adjust(hspace=0)
+
+plt.savefig(f"./plots/{result_id}.eps", bbox_inches="tight", dpi=1200)
+
+"""Total PROTAC over time"""
+
+# fig, ax = plt.subplots()
 # sns.lineplot(
-#     data=result_ternary,
+#     data=result_protac,
 #     x='t',
-#     y='value',
+#     y='total_bpd',
 #     hue='PROTAC',
-#     linestyle='--',
 #     palette='Set2',
-#     ax=ax2,
-#     legend=False
+#     linewidth=2,
+#     ax=ax
 # )
-# ax2.set_ylabel('Ternary complex formation (umol)')
-# ax2.set_ylim(0, result_ternary['value'].max() * 2.5)
-# ax2.tick_params(labelsize=15, direction='in')
-
-# plt.title(r'Target Protein Degradation with initial $[PROTAC]_{ec} = 1$ nM', y=1.05)
-plt.setp(ax.get_legend().get_texts(), fontsize='8')  # for legend text
-# plt.setp(ax.get_legend().get_title(), fontsize='15')  # for legend title
-plt.savefig(f"./plots/{result_id}.png", bbox_inches="tight", dpi=1200)
+# ax.set_xlabel('Time (h)')
+# ax.set_xlim(result_protac['t'].min(), result_protac['t'].max())
+# ax.set_xticks(ticks=np.arange(start=0, stop=result_protac['t'].max() + 1, step=4, dtype=int))
+# ax.set_ylabel('Total PROTAC (umol)')
+# ax.set_ylim(1.999e-7, 2.001e-7)
+# ax.tick_params(labelsize=12, direction='in')
+# ax.legend(loc="upper right", fontsize='8', title_fontsize='8', borderaxespad=0.25)
+#
+# plt.savefig(f"./plots/{result_id}_total_protac.png", bbox_inches="tight", dpi=1200)
 
 """Species totals over time."""
 # result = pd.read_csv(f"./saved_objects/{result_id}.csv")

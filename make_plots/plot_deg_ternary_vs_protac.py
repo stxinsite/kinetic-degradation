@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 
 plt.rcParams["axes.labelsize"] = 14
-plt.rcParams["figure.figsize"] = (4, 7)
+plt.rcParams["figure.figsize"] = (3, 6)
 plt.rcParams["xtick.direction"] = 'in'
 plt.rcParams["xtick.labelsize"] = 12
 plt.rcParams["ytick.direction"] = 'in'
@@ -53,12 +53,11 @@ p = sns.lineplot(
 
 # y-axis settings
 ax1.set_ylim(bottom=0, top=120)
-ax1.set_ylabel('% Baseline Target Protein')
+ax1.set_ylabel('% Baseline Target Protein', labelpad=15)
 
 # legend
 handles, labels = ax1.get_legend_handles_labels()
-ax1.legend(handles=handles, labels=labels, title="", loc='upper right', borderaxespad=0.25)
-plt.setp(ax1.get_legend().get_texts(), fontsize='8')  # for legend text
+ax1.legend(handles=handles, labels=labels, title="", loc='upper right', borderaxespad=0.25, fontsize='12')
 
 # ternary complex formation curves
 q = sns.lineplot(
@@ -73,11 +72,11 @@ q = sns.lineplot(
 )
 
 # x-axis settings
-ax2.set_xlabel(r'Concentration ($\mu$M)')
+ax2.set_xlabel(r'[$P_{ec}$] ($\mu$M)')
 
 # y-axis settings
 ax2.set_ylim(bottom=0)
-ax2.set_ylabel('Ternary Complex (uM)')
+ax2.set_ylabel(r'$\left[\sum_{i=0}^4 T_i\cdot P\cdot E3\right]$ ($\mu$M)')
 
 # create another Axes with shared x-axis
 ax3 = ax2.twinx()
@@ -95,15 +94,15 @@ r = sns.lineplot(
 )
 
 # y-axis settings
-ax3.set_ylim(bottom=result_protac['value'].min(), top=result_protac['value'].max())
 ax3.set_yscale('log')
-ax3.set_ylabel('Total Intracellular PROTAC (uM)')
+ax3.set_ylim(result['initial_BPD_ec_conc'].min(), result['initial_BPD_ec_conc'].max())
+ax3.set_yticks(np.power(10, np.arange(-4, 3, dtype=float)))
+ax3.set_ylabel(r'[$P_{ic}\cdot *$] ($\mu$M)')
 
 # legend
-legend_handles = [Line2D([0], [0], ls='-', label='Ternary complex', color='black'),
-                  Line2D([0], [0], ls='--', label='Total PROTAC', color='black')]
-ax3.legend(handles=legend_handles, title="", loc='upper right', borderaxespad=0.25)
-plt.setp(ax3.get_legend().get_texts(), fontsize='8')  # for legend text
+legend_handles = [Line2D([0], [0], ls='-', label=r'$\sum T_i\cdot P\cdot E3$', color='black'),
+                  Line2D([0], [0], ls='--', label=r'$P_{ic}\cdot *$', color='black')]
+ax3.legend(handles=legend_handles, title="", loc='lower right', borderaxespad=0.25, fontsize='12')
 
 # figure-level x-axis settings
 plt.xscale('log')
@@ -113,4 +112,4 @@ plt.xticks(np.power(10, np.arange(-4, 3, dtype=float)))
 # fig.tight_layout()
 plt.subplots_adjust(hspace=0)
 
-plt.savefig(f"./plots/{result_id}.png", dpi=1200, bbox_inches="tight")
+plt.savefig(f"./plots/{result_id}.eps", dpi=1200, bbox_inches="tight")

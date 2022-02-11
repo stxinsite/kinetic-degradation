@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 plt.rcParams["axes.labelsize"] = 12
 plt.rcParams["axes.titlesize"] = 15
 plt.rcParams["figure.titlesize"] = 20
-plt.rcParams["figure.figsize"] = (4, 3.5)
+plt.rcParams["figure.figsize"] = (3, 3)
 
 protac_id = 'ACBI1'
 t = 6
@@ -64,7 +64,7 @@ handles, labels = ax.get_legend_handles_labels()
 for i in range(1, 4):
     labels[i] = r"$k_{ub} = $" + fr"${labels[i]}/h$"
 labels[4] = ''
-ax.legend(handles=handles[1:], labels=labels[1:], loc='lower left', borderaxespad=0.25)
+ax.legend(handles=handles[1:4], labels=labels[1:4], loc='lower left', borderaxespad=0.25)
 plt.setp(ax.get_legend().get_texts(), fontsize='8')  # for legend text
 # plt.setp(ax.get_legend().get_title(), fontsize='15')  # for legend title
-plt.savefig(f"plots/{result_id}.png", bbox_inches='tight', dpi=1200)
+plt.savefig(f"plots/{result_id}.eps", bbox_inches='tight', dpi=1200)

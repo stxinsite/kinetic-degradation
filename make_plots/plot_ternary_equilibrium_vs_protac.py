@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from kinetic_module.equilibrium_functions import predict_ternary
 
 plt.rcParams["axes.labelsize"] = 14
-plt.rcParams["figure.figsize"] = (4, 3.5)
+plt.rcParams["figure.figsize"] = (3, 3)
 plt.rcParams["xtick.direction"] = 'in'
 plt.rcParams["xtick.labelsize"] = 12
 plt.rcParams["ytick.direction"] = 'in'
@@ -110,18 +110,18 @@ q = sns.lineplot(
 # legend
 handles, labels = ax.get_legend_handles_labels()
 ax.legend(handles=handles, labels=labels, title="", loc='upper left', borderaxespad=0.25)
-plt.setp(ax.get_legend().get_texts(), fontsize='8')  # for legend text
+plt.setp(ax.get_legend().get_texts(), fontsize='8.5')  # for legend text
 
 # x-axis settings
-ax.set_xlabel(r'Concentration ($\mu$M)')
+ax.set_xlabel(r'[$P_{ec}$] ($\mu$M)')
 
 # y-axis settings
 ax.set_ylim(bottom=0)
-ax.set_ylabel('Ternary Complex Formation (uM)')
+ax.set_ylabel(r'[$T\cdot P\cdot E3$] ($\mu$M)')
 
 # figure-level x-axis settings
 plt.xscale('log')
 plt.xlim(result['initial_BPD_ec_conc'].min(), result['initial_BPD_ec_conc'].max())
 plt.xticks(np.power(10, np.arange(-4, 3, dtype=float)))
 
-plt.savefig(f"./plots/{result_id}_equilibrium_static.png", dpi=1200, bbox_inches="tight")
+plt.savefig(f"./plots/{result_id}_equilibrium_static.eps", dpi=1200, bbox_inches="tight")
