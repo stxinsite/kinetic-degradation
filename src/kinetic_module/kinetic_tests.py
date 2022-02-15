@@ -478,7 +478,7 @@ def deg_vs_alpha(
     params = set_keys_to_none(params, keys=keys_to_update)
 
     # combinations of alpha across levels of other parameter
-    params_range = [alpha for alpha in alpha_range]
+    params_range = [(alpha,) for alpha in alpha_range]
 
     # list of parameters dictionaries updated for each alpha across each level of other parameter
     new_params: list[dict[str, float]] = copy_params(
