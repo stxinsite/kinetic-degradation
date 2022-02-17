@@ -1,2 +1,4 @@
 jobs/
 src/kinetic_module/__pycache__/
+.idea/
+.pytest_cache/
