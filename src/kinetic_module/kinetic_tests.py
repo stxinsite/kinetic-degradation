@@ -456,6 +456,49 @@ def kprod_vs_alpha(config_filename: str,
     return result
 
 
+def deg_vs_alpha(
+    config_filename: str,
+    protac_id: str,
+    t_eval: Union[ArrayLike, float, int],
+    alpha_range: Iterable[float],
+    initial_bpd_ec_conc: float = None,
+    initial_bpd_ic_conc: float = None
+) -> pd.DataFrame:
+    # these parameters will be set to None in order to be calculated and updated by KineticParameters() with new alpha
+    keys_to_update = [
+        'koff_T_binary',
+        'koff_T_ternary',
+        'koff_E3_binary',
+        'koff_E3_ternary',
+        'Kd_T_ternary',
+        'Kd_E3_ternary'
+    ]
+
+    params = get_params_from_config(config_filename=config_filename)
+    params = set_keys_to_none(params, keys=keys_to_update)
+
+    # combinations of alpha across levels of other parameter
+    params_range = [(alpha,) for alpha in alpha_range]
+
+    # list of parameters dictionaries updated for each alpha across each level of other parameter
+    new_params: list[dict[str, float]] = copy_params(
+        params=params,
+        parameter_names=['alpha'],
+        new_values=params_range
+    )
+
+    result = pool_solve_target_degradation(
+        t_eval=t_eval,
+        params_list=new_params,
+        initial_bpd_ec_conc=initial_bpd_ec_conc,
+        initial_bpd_ic_conc=initial_bpd_ic_conc,
+        return_only_final_state=True,
+        protac_id=protac_id
+    )
+
+    return result
+
+
 def run_alpha_across_param_levels(config_filename: str,
                                   protac_id: str,
                                   parameters_to_calc: list[str],
