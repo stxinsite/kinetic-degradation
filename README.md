@@ -147,7 +147,7 @@ In your current working directory, create a folder named `saved_objects/`; this 
 
 ## Example 
 ```commandline
-python bin/run_kinetic_model.py
+python bin/deg_vs_time.py
 ```
 
 
