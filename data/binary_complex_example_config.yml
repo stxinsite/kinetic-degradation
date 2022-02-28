@@ -1,0 +1,27 @@
+alpha: 0
+Kd_T_binary: 0
+kon_T_binary: 0
+koff_T_binary: 0
+Kd_T_ternary: 0
+kon_T_ternary: 0
+koff_T_ternary: 0
+Kd_E3_binary:  0.0694
+kon_E3_binary: 5364
+koff_E3_binary: null
+Kd_E3_ternary: 0
+kon_E3_ternary: 0
+koff_E3_ternary: 0
+n: 0
+kub: 0
+kde_ub: 0
+kdeg_UPS: 0
+kdeg_Ternary: 0
+fu_ec: 0
+fu_ic: 1
+PS_cell: 0
+kdeg_T: 0
+Conc_T_base: 0
+Conc_E3_base: 50.0
+num_cells: 0
+Vic: 5.24e-13  # must be > 0
+Vec: 2.0e-4
