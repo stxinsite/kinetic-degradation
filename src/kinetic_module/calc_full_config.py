@@ -106,18 +106,16 @@ class KineticParameters(object):
         """
 
         for lhs_key, rhs_key1, rhs_key2, pwr in self.expression_list[::direction]:
-            value: Optional[float]
+            value: Optional[float] = self._params.setdefault(lhs_key)
             proposed_value: Optional[float]
-
-            try:
-                self._params[lhs_key]
-            except KeyError:
-                print(f"{lhs_key} was not provided.")
-            finally:
-                value = self._params.setdefault(lhs_key)
 
             rhs_value1 = self._params.get(rhs_key1)
             rhs_value2 = self._params.get(rhs_key2)
+
+            if [value, rhs_value1, rhs_value2].count(0) >= 2:
+                self._params[lhs_key] = 0
+                continue
+
             try:
                 proposed_value = rhs_value1 * (rhs_value2 ** pwr)
             except TypeError:
