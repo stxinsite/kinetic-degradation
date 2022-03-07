@@ -9,7 +9,8 @@ from matplotlib.lines import Line2D
 plt.rcParams["axes.labelsize"] = 14
 plt.rcParams["xtick.labelsize"] = 12
 plt.rcParams["ytick.labelsize"] = 12
-plt.rcParams["figure.figsize"] = (3, 6)
+# plt.rcParams["figure.figsize"] = (3, 6)
+plt.rcParams["figure.figsize"] = (3, 3)
 
 protac_ids = ['PROTAC 1', 'ACBI1']
 test_id = '&'.join(protac_ids)
@@ -43,7 +44,8 @@ sns.set_style("ticks")
 
 """Degradation over time."""
 
-fig, (ax, ax2) = plt.subplots(2, 1, sharex='all')
+# fig, (ax, ax2) = plt.subplots(2, 1, sharex='all')
+fig, ax = plt.subplots()
 
 # degradation vs. time
 sns.lineplot(
@@ -63,38 +65,39 @@ ax.set_ylim(0, 120)
 # legend
 ax.legend(loc="upper right", borderaxespad=0.25, fontsize='10')
 
-# species vs. time
-sns.lineplot(
-    data=result_species,
-    x='t',
-    y='value',
-    hue='PROTAC',
-    style='variable',
-    palette='Set2',
-    ax=ax2,
-    legend=False
-)
+# # species vs. time
+# sns.lineplot(
+#     data=result_species,
+#     x='t',
+#     y='value',
+#     hue='PROTAC',
+#     style='variable',
+#     palette='Set2',
+#     ax=ax2,
+#     legend=False
+# )
 
-# y-axis settings
-ax2.set_ylabel('% Target Occupancy', labelpad=15)
-ax2.set_ylim(bottom=0, top=6)
-ax2.set_yticks(ticks=range(6))
+# # y-axis settings
+# ax2.set_ylabel('% Target Occupancy', labelpad=15)
+# ax2.set_ylim(bottom=0, top=6)
+# ax2.set_yticks(ticks=range(6))
 
 # ticks
 ax.tick_params(labelsize=12, direction='in')
-ax2.tick_params(labelsize=12, direction='in')
+# ax2.tick_params(labelsize=12, direction='in')
 
-legend_handles = [Line2D([0], [0], ls='-', label=r'$\sum_{i=0}^4 T_i\cdot P\cdot E3$', color='black'),
-                  Line2D([0], [0], ls='--', label=r'$T_4 + T_4\cdot P$', color='black')]
-ax2.legend(handles=legend_handles, title="", loc='upper right', borderaxespad=0.25,
-           fontsize='10')
+# legend_handles = [Line2D([0], [0], ls='-', label=r'$\sum_{i=0}^4 T_i\cdot P\cdot E3$', color='black'),
+#                   Line2D([0], [0], ls='--', label=r'$T_4 + T_4\cdot P$', color='black')]
+# ax2.legend(handles=legend_handles, title="", loc='upper right', borderaxespad=0.25,
+#            fontsize='10')
 
 # x-axis settings
-ax2.set_xlabel('Time (h)')
+# ax2.set_xlabel('Time (h)')
+ax.set_xlabel('Time (h)')
 plt.xlim(result_deg['t'].min(), result_deg['t'].max())
 plt.xticks(ticks=np.arange(start=0, stop=result_deg['t'].max() + 1, step=4, dtype=int))
 
-plt.subplots_adjust(hspace=0)
+# plt.subplots_adjust(hspace=0)
 
 plt.savefig(f"./plots/{result_id}.eps", bbox_inches="tight", dpi=1200)
 

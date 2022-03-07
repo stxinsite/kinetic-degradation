@@ -28,14 +28,17 @@ result = result.melt(id_vars=['alpha', 't'])
 
 sns.set_style("whitegrid")
 fig, ax = plt.subplots()
+
+pal = sns.color_palette("Oranges", n_colors=9).as_hex()
+
 p = sns.lineplot(
     data=result,
     x='alpha',
     y='value',
     hue='t',
     style='variable',
-    palette='Set2',
-    linewidth=1,
+    palette=[pal[i] for i in [4, 6, 8]],
+    linewidth=1.25,
     ax=ax
 )
 # p.tick_params(labelsize=12)
