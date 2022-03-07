@@ -340,9 +340,9 @@ def kdeg_ups_vs_alpha(config_filename: str,
                       protac_id: str,
                       t_eval: Union[ArrayLike, float, int],
                       alpha_range: Iterable[float],
-                      kdeg_UPS_range: Iterable[float],
-                      initial_BPD_ec_conc: float = None,
-                      initial_BPD_ic_conc: float = None) -> pd.DataFrame:
+                      kdeg_ups_range: Iterable[float],
+                      initial_bpd_ec_conc: float = None,
+                      initial_bpd_ic_conc: float = None) -> pd.DataFrame:
     # these parameters will be set to None in order to be calculated and updated by KineticParameters() with new alpha
     keys_to_update = [
         'koff_T_binary',
@@ -357,12 +357,13 @@ def kdeg_ups_vs_alpha(config_filename: str,
         protac_id=protac_id,
         parameters_to_calc=keys_to_update,
         other_param_name='kdeg_UPS',
-        other_param_range=kdeg_UPS_range,
+        other_param_range=kdeg_ups_range,
         alpha_range=alpha_range,
         t_eval=t_eval,
-        initial_bpd_ec_conc=initial_BPD_ec_conc,
-        initial_bpd_ic_conc=initial_BPD_ic_conc
+        initial_bpd_ec_conc=initial_bpd_ec_conc,
+        initial_bpd_ic_conc=initial_bpd_ic_conc
     )
+
     return result
 
 
@@ -474,17 +475,62 @@ def deg_vs_alpha(
         'Kd_E3_ternary'
     ]
 
+    return deg_vs_param(
+        config_filename=config_filename,
+        protac_id=protac_id,
+        t_eval=t_eval,
+        param_name='alpha',
+        param_range=alpha_range,
+        keys_to_update=keys_to_update,
+        initial_bpd_ec_conc=initial_bpd_ec_conc,
+        initial_bpd_ic_conc=initial_bpd_ic_conc
+    )
+
+
+def deg_vs_param(
+    config_filename: str,
+    protac_id: str,
+    t_eval: Union[ArrayLike, float, int],
+    param_name: str,
+    param_range: Iterable[float],
+    keys_to_update: Optional[Iterable] = None,
+    initial_bpd_ec_conc: float = None,
+    initial_bpd_ic_conc: float = None
+) -> pd.DataFrame:
+    """Simulate degradation at fixed time point across range of a model parameter.
+
+    Parameters
+    ----------
+    config_filename : str
+        Path to simulation config.
+    protac_id : str
+        PROTAC identifier.
+    t_eval : Union[ArrayLike, float, int]
+        Time point at which to compute degradation. If array-like, maximum value will be used.
+    param_name : str
+        Name of simulation parameter being varied.
+    param_range : Iterable[float]
+        Range of simulation parameter being varied.
+    keys_to_update : Optional[Iterable], optional
+        Name(s) of simulation parameters to update with varied parameter, by default None.
+    initial_bpd_ec_conc : float, optional
+        Initial extracellular PROTAC concentration, by default None.
+    initial_bpd_ic_conc : float, optional
+        Initial intracellular PROTAC concentration, by default None.
+
+    Returns
+    -------
+    pd.DataFrame
+        Simulation results.
+    """
     params = get_params_from_config(config_filename=config_filename)
     params = set_keys_to_none(params, keys=keys_to_update)
-
-    # combinations of alpha across levels of other parameter
-    params_range = [(alpha,) for alpha in alpha_range]
 
     # list of parameters dictionaries updated for each alpha across each level of other parameter
     new_params: list[dict[str, float]] = copy_params(
         params=params,
-        parameter_names=['alpha'],
-        new_values=params_range
+        parameter_names=[param_name],
+        new_values=[(val,) for val in param_range]
     )
 
     result = pool_solve_target_degradation(
@@ -701,7 +747,7 @@ def get_params_from_config(config_filename: str) -> Optional[dict[str, float]]:
         return params
 
 
-def set_keys_to_none(a_dict: dict, keys: Iterable) -> dict:
+def set_keys_to_none(a_dict: dict, keys: Optional[Iterable]) -> dict:
     """Sets keys in dictionary to None.
 
     Parameters
@@ -717,8 +763,11 @@ def set_keys_to_none(a_dict: dict, keys: Iterable) -> dict:
     dict
         Dictionary with values corresponding to all keys in `keys` set to None.
     """
-    for key in keys:
-        a_dict[key] = None
+    if keys is None:
+        return a_dict
+    else:
+        for key in keys:
+            a_dict[key] = None
 
     return a_dict
 
