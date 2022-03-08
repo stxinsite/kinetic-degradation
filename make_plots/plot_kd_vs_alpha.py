@@ -37,8 +37,8 @@ p = sns.lineplot(
     y='value',
     hue='Kd_T_binary',
     style='variable',
-    palette='Set2',
-    linewidth=1,
+    palette='Spectral',
+    linewidth=1.25,
     ax=ax
 )
 # p.tick_params(labelsize=12)

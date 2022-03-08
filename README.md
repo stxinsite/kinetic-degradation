@@ -132,7 +132,7 @@ See files in `bin/` for examples of how to simulate a UPS.
 
 # Tutorial  
 
-To run scripts from the command line, first run:
+1) Add `src` to the `PYTHONPATH` environment variable to make the modules there accessible.
 
 **Linux**
 ```commandline
@@ -143,13 +143,28 @@ export PYTHONPATH="$(pwd)/src/"
 set PYTHONPATH=%cd%\src\;%PYTHONPATH%
 ```
 
-In your current working directory, create a folder named `saved_objects/`; this is where results will be stored.
+2) In your current working directory, create a folder named `saved_objects`. This is where simulations results are saved to in the examples in `bin`.
 
-## Example 
+3) In your current working directory, create a folder named `data` and store simulation config `.yml` files there.
+
+**Example**
+```commandline
+./data/unit_test_config.yml
+```
+
+4) Run a simulation script from the command line. 
+
+**Example**
 ```commandline
 python bin/deg_vs_time.py
 ```
 
+5) In your current working directory, create a folder named `plots` and visualize the simulation results.
 
-#### References
+**Example**
+```commandline
+python make_plots/plot_deg_vs_time.py
+```
+
+## References
 <a name="bartlett">1</a>: https://doi.org/10.1007/s10928-020-09722-z

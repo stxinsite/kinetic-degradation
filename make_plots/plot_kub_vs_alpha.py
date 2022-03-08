@@ -39,8 +39,8 @@ p = sns.lineplot(
     y='value',
     hue='kub',
     style='variable',
-    palette='Set2',
-    linewidth=1,
+    palette='PiYG',
+    linewidth=1.25,
     alpha=1,
     ax=ax
 )
