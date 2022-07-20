@@ -376,9 +376,9 @@ def kdeg_ternary_vs_alpha(config_filename: str,
                           initial_BPD_ic_conc: float = None) -> pd.DataFrame:
     # these parameters will be set to None in order to be calculated and updated by KineticParameters() with new alpha
     keys_to_update = [
-        'koff_T_binary',
+        # 'koff_T_binary',
         'koff_T_ternary',
-        'koff_E3_binary',
+        # 'koff_E3_binary',
         'koff_E3_ternary',
         'Kd_T_ternary',
         'Kd_E3_ternary'
