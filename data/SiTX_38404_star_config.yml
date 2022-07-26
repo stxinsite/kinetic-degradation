@@ -18,7 +18,7 @@ kdeg_UPS: 60
 kdeg_Ternary: 0
 fu_ec: 1
 fu_ic: 1
-PS_cell: 1.24e-12
+PS_cell: 2.49e-11
 kdeg_T: 0.1
 Conc_T_base: 1.0
 Conc_E3_base: 1.0

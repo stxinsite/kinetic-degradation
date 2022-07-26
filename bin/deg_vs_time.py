@@ -8,9 +8,24 @@ import numpy as np
 import kinetic_module.kinetic_tests as kt
 
 if __name__ == '__main__':
-    config_files = ['SiTX_38404_config.yml', 'SiTX_38406_config.yml']
-    protac_ids = ['PROTAC 1', 'ACBI1']
-    test_id = 'PROTAC1&ACBI1'
+    config_files = [
+        'SiTX_38404_config.yml', 
+        'SiTX_38404_star_config.yml',
+        # 'SiTX_38406_config.yml',
+        'SiTX_38404_kdeg_ternary_config.yml',
+        'SiTX_38404_star_kdeg_ternary_config.yml',
+        # 'SiTX_38406_kdeg_ternary_config.yml',
+    ]
+    protac_ids = [
+        'PROTAC 1', 
+        'PROTAC 1*',
+        # 'ACBI1',
+        'PROTAC 1',
+        'PROTAC 1*',
+        # 'ACBI1',
+    ]
+
+    test_id = 'deg_vs_time_kdeg_ternary_tmp'
 
     # config_files = ['SiTX_38406_config.yml']
     # protac_ids = ['ACBI1']
@@ -29,4 +44,5 @@ if __name__ == '__main__':
         initial_BPD_ec_concs=initial_BPD_conc,
         return_only_final_state=False
     )
+
     result.to_csv(f"./saved_objects/{test_id}_bpd_ec={initial_BPD_conc}_t={int(np.max(t_eval))}.csv", index=False)

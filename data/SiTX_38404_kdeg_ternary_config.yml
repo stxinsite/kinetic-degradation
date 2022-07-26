@@ -15,7 +15,7 @@ n: 4
 kub: 1500
 kde_ub: 360
 kdeg_UPS: 60
-kdeg_Ternary: 0
+kdeg_Ternary: 60
 fu_ec: 1
 fu_ic: 1
 PS_cell: 1.24e-12
