@@ -21,7 +21,7 @@ fu_ic: 1
 PS_cell: 1.24e-12
 kdeg_T: 0.1
 Conc_T_base: 1.0
-Conc_E3_base: 1.0
+Conc_E3_base: 0.1 # E3 concentration is restricted
 num_cells: 5.0e+3
 Vic: 5.24e-13
 Vec: 2.0e-4

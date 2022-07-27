@@ -1158,14 +1158,18 @@ def calc_degradation_curve(t_eval: ArrayLike,
     poly_ub_target_rates = pd.Series(np.sum(rates_at_t[[6 + params['n'], 6 + 2 * params['n']], :], axis=0)) if params['n'] > 0 else None
     # select the row for rate of change in fully ubiquitinated ternary complex
     poly_ub_ternary_rates = pd.Series(rates_at_t[-1, :]) if params['n'] > 0 else None
-    assert check_target_degradation_rates(
-        params=params,
-        degradation_from_ode=degradation_rates,
-        total_target=concentrations_df.filter(regex='.*T.*').sum(axis=1),
-        total_poly_ub_target=concentrations_df.filter(regex=f".*T_Ub_{params['n']}").sum(axis=1),
-        total_poly_ub_ternary=concentrations_df[f"Ternary_Ub_{params['n']}"]
-    ), "Rate of change in total target not consistent."
-
+    
+    try: 
+        assert check_target_degradation_rates(
+            params=params,
+            degradation_from_ode=degradation_rates,
+            total_target=concentrations_df.filter(regex='.*T.*').sum(axis=1),
+            total_poly_ub_target=concentrations_df.filter(regex=f".*T_Ub_{params['n']}").sum(axis=1),
+            total_poly_ub_ternary=concentrations_df[f"Ternary_Ub_{params['n']}"]
+        ), "Rate of change in total target not consistent."
+    except AssertionError as e:
+        print(e)
+        
     # calculate simulation result metrics
     metrics_df = pd.DataFrame({
         'percent_degradation': 100 - concentrations_df.filter(regex='.*T.*').sum(axis=1) / total_target_baseline * 100,
