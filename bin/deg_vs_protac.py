@@ -8,9 +8,16 @@ import numpy as np
 import kinetic_module.kinetic_tests as kt
 
 if __name__ == '__main__':
-    config_files = ['SiTX_38404_config.yml', 'SiTX_38406_config.yml']
-    protac_ids = ['PROTAC 1', 'ACBI1']
-    test_id = 'PROTAC1&ACBI1'
+    config_files = [
+        'SiTX_38404_kdeg_ternary_low_E3_config.yml',
+        'SiTX_38406_kdeg_ternary_low_E3_config.yml'
+    ]
+    protac_ids = [
+        'PROTAC 1', 
+        'ACBI1'
+    ]
+
+    test_id = 'deg_ternary_protac_vs_protac_high_kdeg_ternary'
 
     """Vary initial extracellular BPD concentrations and
     solve to a fixed time point.
@@ -25,4 +32,5 @@ if __name__ == '__main__':
         initial_BPD_ec_concs=initial_BPD_ec_concs,
         return_only_final_state=True
     )
-    result.to_csv(f"./saved_objects/{test_id}_target=1_e3=0.1_t={t_eval}.csv", index=False)
+    
+    result.to_csv(f"./saved_objects/{test_id}_t={t_eval}.csv", index=False)
