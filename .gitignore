@@ -1,3 +1,7 @@
+# virtualenv
+env/
+
+
 jobs/
 src/kinetic_module/__pycache__/
 .idea/
