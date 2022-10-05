@@ -1,7 +1,7 @@
 """
 This module contains functions used to implement a kinetic proofreading model of target protein degradation.
 """
-from typing import Optional, Iterable
+from typing import Optional, Iterable, Dict
 
 import numpy as np
 from numpy.typing import NDArray, ArrayLike
@@ -62,7 +62,7 @@ KINETIC RATES
 
 def dBPD_ecdt(BPD_ec: float,
               BPD_ic: float,
-              params: dict[str, float]) -> float:
+              params: Dict[str, float]) -> float:
     """Calculates dBPD_ec / dt.
 
     Parameters
@@ -73,7 +73,7 @@ def dBPD_ecdt(BPD_ec: float,
     BPD_ic : float
         amount of intracellular BPD
 
-    params : dict[str, float]
+    params : Dict[str, float]
         kinetic rate constants and model parameters
 
     Returns
@@ -95,7 +95,7 @@ def dBPD_icdt(BPD_ec: float,
               BPD_T: float,
               BPD_T_Ubs: NDArray[np.float64],
               BPD_E3: float,
-              params: dict[str, float]) -> float:
+              params: Dict[str, float]) -> float:
     """Calculates dBPD_ic / dt.
 
     Parameters
@@ -124,7 +124,7 @@ def dBPD_icdt(BPD_ec: float,
     BPD_E3 : float
         amount of BPD_E3
 
-    params : dict[str, float]
+    params : Dict[str, float]
         kinetic rate constants and model parameters
 
     Returns
@@ -148,7 +148,7 @@ def dTargetdt(BPD_ic: float,
               BPD_T: float,
               BPD_E3: float,
               Ternary: float,
-              params: dict[str, float]) -> float:
+              params: Dict[str, float]) -> float:
     """Calculates dTarget / dt.
 
     Parameters
@@ -171,7 +171,7 @@ def dTargetdt(BPD_ic: float,
     Ternary : float
         amount of Ternary
 
-    params : dict[str, float]
+    params : Dict[str, float]
         kinetic rate constants and model parameters
 
     Returns
@@ -196,7 +196,7 @@ def dE3dt(BPD_ic: float,
           BPD_E3: float,
           Ternary: float,
           Ternary_Ubs: NDArray[np.float64],
-          params: dict[str, float]) -> float:
+          params: Dict[str, float]) -> float:
     """Calculates dE3 / dt.
 
     Parameters
@@ -222,7 +222,7 @@ def dE3dt(BPD_ic: float,
     Ternary_Ubs : NDArray[np.float64]
         amounts of ubiquitinated Ternaries
 
-    params : dict[str, float]
+    params : Dict[str, float]
         kinetic rate constants and model parameters
 
     Returns
@@ -244,7 +244,7 @@ def dBPD_Tdt(BPD_ic: float,
              BPD_T: float,
              BPD_T_Ubs: NDArray[np.float64],
              Ternary: float,
-             params: dict[str, float]) -> float:
+             params: Dict[str, float]) -> float:
     """Calculates dBPD.T / dt.
 
     Parameters
@@ -267,7 +267,7 @@ def dBPD_Tdt(BPD_ic: float,
     Ternary : float
         amount of Ternary
 
-    params : dict[str, float]
+    params : Dict[str, float]
         kinetic rate constants and model parameters
 
     Returns
@@ -291,7 +291,7 @@ def dBPD_E3dt(BPD_ic: float,
               BPD_E3: float,
               Ternary: float,
               Ternary_Ubs: NDArray[np.float64],
-              params: dict[str, float]) -> float:
+              params: Dict[str, float]) -> float:
     """Calculates dBPD.E3 / dt.
 
     BPD_ic : float
@@ -315,7 +315,7 @@ def dBPD_E3dt(BPD_ic: float,
     Ternary_Ubs : NDArray[np.float64]
         amounts of ubiquitinated Ternaries
 
-    params : dict[str, float]
+    params : Dict[str, float]
         kinetic rate constants and model parameters
 
     Returns
@@ -337,7 +337,7 @@ def dTernarydt(T: float,
                BPD_T: float,
                BPD_E3: float,
                Ternary: float,
-               params: dict[str, float]) -> float:
+               params: Dict[str, float]) -> float:
     """Calculates dTernary / dt.
 
     BPD_ic : float
@@ -358,7 +358,7 @@ def dTernarydt(T: float,
     Ternary : float
         amount of Ternary
 
-    params : dict[str, float]
+    params : Dict[str, float]
         kinetic rate constants and model parameters
 
     Returns
@@ -379,7 +379,7 @@ def dT_Ubdt(T_Ub_consec_pair: NDArray[np.float64],
             BPD_E3: float,
             Ternary_Ub_i: float,
             i: int,
-            params: dict[str, float]) -> float:
+            params: Dict[str, float]) -> float:
     """Calculates dT.Ub.i / dt for i = 1, ..., n.
 
     Parameters
@@ -402,7 +402,7 @@ def dT_Ubdt(T_Ub_consec_pair: NDArray[np.float64],
     i : int
         index of T.Ub.i
 
-    params : dict[str, float]
+    params : Dict[str, float]
         kinetic rate constants and model parameters
 
     Returns
@@ -427,7 +427,7 @@ def dBPD_T_Ubdt(BPD_T_Ub_consec_pair: NDArray[np.float64],
                 E3: float,
                 Ternary_Ub_i: float,
                 i: int,
-                params: dict[str, float]) -> float:
+                params: Dict[str, float]) -> float:
     """Calculates dBPD.T.Ub.i / dt for i = 1, ..., n.
 
     Parameters
@@ -447,7 +447,7 @@ def dBPD_T_Ubdt(BPD_T_Ub_consec_pair: NDArray[np.float64],
     i : int
         index of BPD.T.Ub.i
 
-    params : dict[str, float]
+    params : Dict[str, float]
         kinetic rate constants and model parameters
 
     Returns
@@ -472,7 +472,7 @@ def dTernary_Ubdt(Ternary_Ub_consec_pair: NDArray[np.float64],
                   BPD_T_Ub_i: float,
                   BPD_E3: float,
                   i: int,
-                  params: dict[str, float]) -> float:
+                  params: Dict[str, float]) -> float:
     """Calculates dTernary_Ub_i / dt for i = 1, ... n.
 
     Parameters
@@ -495,7 +495,7 @@ def dTernary_Ubdt(Ternary_Ub_consec_pair: NDArray[np.float64],
     i : int
         index of Ternary.Ub.i
 
-    params : dict[str, float]
+    params : Dict[str, float]
         kinetic rate constants and model parameters
 
     Returns
@@ -512,7 +512,7 @@ def dTernary_Ubdt(Ternary_Ub_consec_pair: NDArray[np.float64],
     )
 
 
-def kinetic_rates(y: NDArray[np.float64], params: dict[str, float]) -> NDArray[np.float64]:
+def kinetic_rates(y: NDArray[np.float64], params: Dict[str, float]) -> NDArray[np.float64]:
     """Calculates rates of change for species in PROTAC-induced target protein degradation.
 
     Parameters
@@ -522,7 +522,7 @@ def kinetic_rates(y: NDArray[np.float64], params: dict[str, float]) -> NDArray[n
             BPD_ec, BPD_ic, T, E3, BPD_T, BPD_E3, Ternary,
             T_Ub_1, ..., T_Ub_n, BPD_T_Ub_1, ..., BPD_T_Ub_n, Ternary_Ub_1, ..., Ternary_Ub_n
 
-    params : dict[str, float]
+    params : Dict[str, float]
         kinetic rate constants and model parameters
 
     Returns
@@ -579,7 +579,7 @@ def kinetic_rates(y: NDArray[np.float64], params: dict[str, float]) -> NDArray[n
     return all_rates
 
 
-def jac_kinetic_rates(y: NDArray[np.float64], params: dict[str, float]) -> NDArray[np.float64]:
+def jac_kinetic_rates(y: NDArray[np.float64], params: Dict[str, float]) -> NDArray[np.float64]:
     """Calculates Jacobian of system of rate equations.
 
     Calculates M x M Jacobian J of M rate equations with respect to M species
@@ -594,7 +594,7 @@ def jac_kinetic_rates(y: NDArray[np.float64], params: dict[str, float]) -> NDArr
             BPD_ec, BPD_ic, T, E3, BPD_T, BPD_E3, Ternary,
             T_Ub_1, ..., T_Ub_n, BPD_T_Ub_1, ..., BPD_T_Ub_n, Ternary_Ub_1, ..., Ternary_Ub_n
 
-    params : dict[str, float]
+    params : Dict[str, float]
         kinetic rate constants and model parameters
 
     Returns
@@ -796,12 +796,12 @@ SOLVE SYSTEM OF ODES
 """
 
 
-def initial_values(params: dict[str, float], BPD_ec: float = 0, BPD_ic: float = 0) -> NDArray[float]:
+def initial_values(params: Dict[str, float], BPD_ec: float = 0, BPD_ic: float = 0) -> NDArray[float]:
     """Returns array of initial values for species amounts.
 
     Parameters
     ----------
-    params : dict[str, float]
+    params : Dict[str, float]
         model parameters.
 
     BPD_ec : float
@@ -828,7 +828,7 @@ def initial_values(params: dict[str, float], BPD_ec: float = 0, BPD_ic: float = 
 
 def calc_concentrations(t_eval: ArrayLike,
                         y0: NDArray[float],
-                        params: dict[str, float],
+                        params: Dict[str, float],
                         max_step: float = np.inf,
                         half_maximal_target: Optional[float] = None) -> sklearn.utils.Bunch:
     """Solves the initial value problem for target protein degradation.
@@ -846,7 +846,7 @@ def calc_concentrations(t_eval: ArrayLike,
             BPD_ec, BPD_ic, T, E3, BPD_T, BPD_E3, Ternary,
             T_Ub_1, ..., T_Ub_n, BPD_T_Ub_1, ..., BPD_T_Ub_n, Ternary_Ub_1, ..., Ternary_Ub_n
 
-    params : dict[str, float]
+    params : Dict[str, float]
         kinetic rate constants and model parameters for rate equations
 
     max_step : float
@@ -914,7 +914,7 @@ def calc_concentrations(t_eval: ArrayLike,
     return result
 
 
-def solve_steady_state(initial_guess: NDArray[float], params: dict[str, float]) -> NDArray[float]:
+def solve_steady_state(initial_guess: NDArray[float], params: Dict[str, float]) -> NDArray[float]:
     """Solves system steady state.
 
     Computes the amounts of species at steady state, at which all kinetic rate equations equal 0.
@@ -924,7 +924,7 @@ def solve_steady_state(initial_guess: NDArray[float], params: dict[str, float]) 
     initial_guess : NDArray[float]
         initial guess for steady state solution
 
-    params : dict[str, float]
+    params : Dict[str, float]
         kinetic rate constants and model parameters for rate equations
 
     Returns
@@ -963,7 +963,7 @@ def solve_steady_state(initial_guess: NDArray[float], params: dict[str, float]) 
 
 
 def calc_Dmax(y0: NDArray,
-              params: dict[str, float],
+              params: Dict[str, float],
               initial_guess: Optional[NDArray] = None,
               t_eval: Optional[ArrayLike] = None) -> float:
     """Calculates Dmax.
@@ -975,7 +975,7 @@ def calc_Dmax(y0: NDArray,
     y0 : NDArray
         initial values of species amounts
 
-    params : dict[str, float]
+    params : Dict[str, float]
         kinetic rate constants and model parameters for rate equations
 
     initial_guess : Optional[NDArray]
@@ -1003,7 +1003,7 @@ def calc_Dmax(y0: NDArray,
     return Dmax
 
 
-def calc_t_half(t_eval: ArrayLike, y0: NDArray, params: dict[str, float]) -> float:
+def calc_t_half(t_eval: ArrayLike, y0: NDArray, params: Dict[str, float]) -> float:
     """Computes the time at which the amount of total Target reaches half-maximal degradation amount.
 
     Parameters
@@ -1014,7 +1014,7 @@ def calc_t_half(t_eval: ArrayLike, y0: NDArray, params: dict[str, float]) -> flo
     y0 : NDArray
         initial values of species amounts
 
-    params : dict[str, float]
+    params : Dict[str, float]
         kinetic rate constants and model parameters for rate equations
 
     Returns
@@ -1044,7 +1044,7 @@ def calc_t_half(t_eval: ArrayLike, y0: NDArray, params: dict[str, float]) -> flo
 
 
 def calc_degradation_curve(t_eval: ArrayLike,
-                           params: dict[str, float],
+                           params: Dict[str, float],
                            initial_BPD_ec_conc: float = 0,
                            initial_BPD_ic_conc: float = 0,
                            return_only_final_state: bool = True) -> pd.DataFrame:
@@ -1057,7 +1057,7 @@ def calc_degradation_curve(t_eval: ArrayLike,
     t_eval : ArrayLike
         Time points at which to store computed solution.
 
-    params : dict[str, float]
+    params : Dict[str, float]
         Kinetic rate constants and model parameters for rate equations.
 
     initial_BPD_ec_conc : float
@@ -1215,7 +1215,7 @@ def calc_degradation_curve(t_eval: ArrayLike,
     return result
 
 
-def check_target_degradation_rates(params: dict[str, float],
+def check_target_degradation_rates(params: Dict[str, float],
                                    degradation_from_ode: Iterable[float],
                                    total_target: Iterable[float],
                                    total_poly_ub_target: Iterable[float],
@@ -1224,7 +1224,7 @@ def check_target_degradation_rates(params: dict[str, float],
 
     Parameters
     ----------
-    params : dict[str, float]
+    params : Dict[str, float]
         Kinetic rate constants and model parameters.
     degradation_from_ode : Iterable[float]
         Instantaneous degradation rates calculated from ODEs.

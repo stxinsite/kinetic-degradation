@@ -4,7 +4,7 @@ using configuration(s) of model parameters and initial values.
 
 
 """
-from typing import Iterable, Union, Optional
+from typing import Iterable, Union, Optional, Dict, List, Tuple
 from multiprocessing import Pool, cpu_count
 
 import yaml
@@ -34,7 +34,7 @@ To do:
 
 
 def solve_target_degradation(t_eval: Union[ArrayLike, float, int],
-                             params: dict[str, float],
+                             params: Dict[str, float],
                              initial_BPD_ec_concs: Optional[Union[ArrayLike, float, int]] = None,
                              initial_BPD_ic_concs: Optional[Union[ArrayLike, float, int]] = None,
                              return_only_final_state: bool = False,
@@ -47,7 +47,7 @@ def solve_target_degradation(t_eval: Union[ArrayLike, float, int],
     t_eval : Union[ArrayLike, float, int]
         Time points at which to store computed solution.
 
-    params : dict[str, float]
+    params : Dict[str, float]
         Kinetic rate constants and model parameters for rate equations.
 
     initial_BPD_ec_concs : Optional[Union[ArrayLike, float, int]]
@@ -105,7 +105,7 @@ def solve_target_degradation(t_eval: Union[ArrayLike, float, int],
         (t_eval, params, initial_BPD_ec, initial_BPD_ic, return_only_final_state)
         for (initial_BPD_ec, initial_BPD_ic) in zip(initial_BPD_ec_concs, initial_BPD_ic_concs)
     ]
-    outputs: list[pd.DataFrame]
+    outputs: List[pd.DataFrame]
 
     if len(inputs) > 1:
         pool = Pool(processes=cpu_count())
@@ -131,8 +131,8 @@ def solve_target_degradation(t_eval: Union[ArrayLike, float, int],
     return result
 
 
-def run_kinetic_model(config_files: list[str],
-                      protac_IDs: list[str],
+def run_kinetic_model(config_files: List[str],
+                      protac_IDs: List[str],
                       t_eval: Union[ArrayLike, float, int] = np.linspace(0, 1),
                       initial_BPD_ec_concs: Optional[Union[ArrayLike, float, int]] = None,
                       initial_BPD_ic_concs: Optional[Union[ArrayLike, float, int]] = None,
@@ -142,10 +142,10 @@ def run_kinetic_model(config_files: list[str],
 
     Parameters
     ----------
-    config_files : list[str]
+    config_files : List[str]
         config filenames
 
-    protac_IDs : list[str]
+    protac_IDs : List[str]
         PROTAC identifiers
 
     t_eval : Union[ArrayLike, float, int]
@@ -165,10 +165,10 @@ def run_kinetic_model(config_files: list[str],
     pd.DataFrame
         result returned by solve_target_degradation() for each configuration and initial concentration(s).
     """
-    outputs: list[pd.DataFrame] = []
+    outputs: List[pd.DataFrame] = []
 
     for config, protac in zip(config_files, protac_IDs):
-        params: dict[str, float] = get_params_from_config(config)
+        params: Dict[str, float] = get_params_from_config(config)
 
         df: pd.DataFrame = solve_target_degradation(
             t_eval=t_eval,
@@ -436,9 +436,9 @@ def kprod_vs_alpha(config_filename: str,
                    initial_BPD_ic_conc: float = None) -> pd.DataFrame:
     # these parameters will be set to None in order to be calculated and updated by KineticParameters() with new alpha
     keys_to_update = [
-        'koff_T_binary',
+        # 'koff_T_binary',
         'koff_T_ternary',
-        'koff_E3_binary',
+        # 'koff_E3_binary',
         'koff_E3_ternary',
         'Kd_T_ternary',
         'Kd_E3_ternary'
@@ -527,7 +527,7 @@ def deg_vs_param(
     params = set_keys_to_none(params, keys=keys_to_update)
 
     # list of parameters dictionaries updated for each alpha across each level of other parameter
-    new_params: list[dict[str, float]] = copy_params(
+    new_params: List[Dict[str, float]] = copy_params(
         params=params,
         parameter_names=[param_name],
         new_values=[(val,) for val in param_range]
@@ -547,7 +547,7 @@ def deg_vs_param(
 
 def run_alpha_across_param_levels(config_filename: str,
                                   protac_id: str,
-                                  parameters_to_calc: list[str],
+                                  parameters_to_calc: List[str],
                                   other_param_name: str,
                                   other_param_range: Iterable[float],
                                   alpha_range: Iterable[float],
@@ -565,7 +565,7 @@ def run_alpha_across_param_levels(config_filename: str,
     protac_id : str
         PROTAC identifier.
 
-    parameters_to_calc : list[str]
+    parameters_to_calc : List[str]
         Names of parameters to re-calculate using new alpha and other parameter values.
 
     other_param_name : str
@@ -602,7 +602,7 @@ def run_alpha_across_param_levels(config_filename: str,
     ]
 
     # list of parameters dictionaries updated for each alpha across each level of other parameter
-    new_params: list[dict[str, float]] = copy_params(
+    new_params: List[Dict[str, float]] = copy_params(
         params=params,
         parameter_names=[other_param_name, 'alpha'],
         new_values=params_range
@@ -620,7 +620,7 @@ def run_alpha_across_param_levels(config_filename: str,
 
 
 def pool_solve_target_degradation(t_eval: Union[ArrayLike, float, int],
-                                  params_list: list[dict[str, float]],
+                                  params_list: List[Dict[str, float]],
                                   initial_bpd_ec_conc: float,
                                   initial_bpd_ic_conc: float,
                                   return_only_final_state: bool,
@@ -632,7 +632,7 @@ def pool_solve_target_degradation(t_eval: Union[ArrayLike, float, int],
     t_eval : Union[ArrayLike, float, int]
         Time points at which to store computed solution.
 
-    params_list : list[dict[str, float]]
+    params_list : List[Dict[str, float]]
         Multiple sets of kinetic rate constants and model parameters for rate equations.
 
     initial_bpd_ec_conc : Optional[Union[ArrayLike, float, int]]
@@ -666,28 +666,28 @@ def pool_solve_target_degradation(t_eval: Union[ArrayLike, float, int],
     return result
 
 
-def copy_params(params: dict[str, float],
+def copy_params(params: Dict[str, float],
                 parameter_names: Iterable[str],
-                new_values: list[tuple[float, ...]]) -> list[dict[str, float]]:
+                new_values: List[Tuple[float, ...]]) -> List[Dict[str, float]]:
     """Updates parameters for each set of new values.
 
     Parameters
     ----------
-    params : dict[str, float]
+    params : Dict[str, float]
         Kinetic rate constants and model parameters.
 
-    new_values : list[tuple[float]]
+    new_values : List[Tuple[float]]
         List of new parameter values.
 
-    parameter_names : list[str]
+    parameter_names : List[str]
         Names of parameters to set to new values.
 
     Returns
     -------
-    list[dict[str, float]]
+    List[Dict[str, float]]
         Updated parameter dictionaries re-calculated with new values.
     """
-    params_copies: list[dict[str, float]] = [params.copy() for _ in new_values]
+    params_copies: List[Dict[str, float]] = [params.copy() for _ in new_values]
     result = [
         update_params(params=params_copy, keys=parameter_names, values=values)
         for params_copy, values in zip(params_copies, new_values)
@@ -695,17 +695,17 @@ def copy_params(params: dict[str, float],
     return result
 
 
-def get_params_from_dict(params_dict: dict[str, float]) -> Optional[dict[str, float]]:
+def get_params_from_dict(params_dict: Dict[str, float]) -> Optional[Dict[str, float]]:
     """Returns valid dictionary of parameters if possible.
 
     Parameters
     ----------
-    params_dict : dict[str, float]
+    params_dict : Dict[str, float]
         Kinetic rate constants and model parameters for rate equations.
 
     Returns
     -------
-    Optional[dict[str, float]]
+    Optional[Dict[str, float]]
         A fully defined parameters dictionary if `params_dict` is sufficient and consistent. Otherwise, None.
     """
     params = KineticParameters(params_dict)
@@ -715,7 +715,7 @@ def get_params_from_dict(params_dict: dict[str, float]) -> Optional[dict[str, fl
         return None
 
 
-def get_params_from_config(config_filename: str) -> Optional[dict[str, float]]:
+def get_params_from_config(config_filename: str) -> Optional[Dict[str, float]]:
     """Reads a config of model parameters and returns a dictionary.
 
     Parameters
@@ -725,7 +725,7 @@ def get_params_from_config(config_filename: str) -> Optional[dict[str, float]]:
 
     Returns
     -------
-    Optional[dict[str, float]]
+    Optional[Dict[str, float]]
         A fully defined dictionary of kinetic rate constants and model parameters for rate equations.
 
     Raises
@@ -772,12 +772,12 @@ def set_keys_to_none(a_dict: dict, keys: Optional[Iterable]) -> dict:
     return a_dict
 
 
-def update_params(params: dict[str, float], keys: Iterable[str], values: Iterable[float]) -> Optional[dict[str, float]]:
+def update_params(params: Dict[str, float], keys: Iterable[str], values: Iterable[float]) -> Optional[Dict[str, float]]:
     """Updates a dictionary of kinetic rate constants and model parameters.
 
     Parameters
     ----------
-    params : dict[str, float]
+    params : Dict[str, float]
         A dictionary of parameters to update.
 
     keys : Iterable[str]
@@ -788,7 +788,7 @@ def update_params(params: dict[str, float], keys: Iterable[str], values: Iterabl
 
     Returns
     -------
-    Optional[dict[str, float]]
+    Optional[Dict[str, float]]
         A fully defined parameters dictionary if `params` is sufficient and consistent
         updated after setting new parameter values. Otherwise, None.
     """

@@ -1,4 +1,5 @@
-from typing import Literal, Optional
+from typing import Optional, List, Tuple, Dict
+from typing_extensions import Literal
 import numpy as np
 import json
 
@@ -14,7 +15,7 @@ class KineticParameters(object):
 
     Attributes
     ----------
-    _params : dict[str, float]
+    _params : Dict[str, float]
         kinetic rate constants and model parameters for rate equations
     warning_messages: set[str]
         messages for inconsistent parameters
@@ -31,7 +32,7 @@ class KineticParameters(object):
         test whether all parameters in expression_list are known and consistent
     """
 
-    binding_equilibrium_expr: list[tuple[str, str, str, int]] = [
+    binding_equilibrium_expr: List[Tuple[str, str, str, int]] = [
         ('koff_T_binary', 'kon_T_binary', 'Kd_T_binary', 1),
         ('kon_T_binary', 'koff_T_binary', 'Kd_T_binary', -1),
         ('Kd_T_binary', 'koff_T_binary', 'kon_T_binary', -1),
@@ -46,7 +47,7 @@ class KineticParameters(object):
         ('Kd_E3_ternary', 'koff_E3_ternary', 'kon_E3_ternary', -1)
     ]
 
-    cooperativity_expr: list[tuple[str, str, str, int]] = [
+    cooperativity_expr: List[Tuple[str, str, str, int]] = [
         ('Kd_T_binary', 'Kd_T_ternary', 'alpha', 1),
         ('Kd_T_ternary', 'Kd_T_binary', 'alpha', -1),
         ('alpha', 'Kd_T_binary', 'Kd_T_ternary', -1),
@@ -55,9 +56,9 @@ class KineticParameters(object):
         ('alpha', 'Kd_E3_binary', 'Kd_E3_ternary', -1)
     ]
 
-    expression_list: list[tuple[str, str, str, int]] = binding_equilibrium_expr + cooperativity_expr
+    expression_list = binding_equilibrium_expr + cooperativity_expr
 
-    model_params: list[str] = [
+    model_params: List[str] = [
         "n",
         "kub",
         "kde_ub",
@@ -74,14 +75,14 @@ class KineticParameters(object):
         "Vec"
     ]
 
-    def __init__(self, params: dict[str, float]):
+    def __init__(self, params: Dict[str, float]):
         """
         Parameters
         ----------
-        params : dict[str, float]
+        params : Dict[str, float]
             kinetic rate constants and model parameters for rate equations
         """
-        self._params: dict[str, float] = params.copy()
+        self._params: Dict[str, float] = params.copy()
         self.warning_messages: set[str] = set()
         self.check_non_negative()
         self.forward_pass()
@@ -93,7 +94,7 @@ class KineticParameters(object):
         return json.dumps(self._params, indent=4)
 
     @property
-    def params(self) -> dict[str, float]:
+    def params(self) -> Dict[str, float]:
         return self._params
 
     def test_and_calc_params(self, direction: Literal[1, -1]) -> None:
@@ -104,7 +105,7 @@ class KineticParameters(object):
         direction: Literal[1, -1]
             Traverse forward (1) or backward (-1) through parameters.
         """
-
+        
         for lhs_key, rhs_key1, rhs_key2, pwr in self.expression_list[::direction]:
             value: Optional[float] = self._params.setdefault(lhs_key)
             proposed_value: Optional[float]
