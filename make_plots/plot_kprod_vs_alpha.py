@@ -8,15 +8,20 @@ plt.rcParams["axes.titlesize"] = 15
 plt.rcParams["figure.titlesize"] = 20
 plt.rcParams["figure.figsize"] = (3, 3)
 
-E3 = 0.1
-protac_id = 'ACBI1'
-t_eval = 6  # time point at which to calculate
-initial_BPD_ec_conc = 0.001  # initial concentrations of BPD_ec (uM)
-k_deub = 10
-k_deg = 20
+# E3 = 0.1
+# protac_id = 'ACBI1'
+# t_eval = 6  # time point at which to calculate
+# initial_BPD_ec_conc = 0.001  # initial concentrations of BPD_ec (uM)
+# k_deub = 10
+# k_deg = 20
 
-test_id = protac_id.replace(" ", "") + f"_bpd_ec={initial_BPD_ec_conc}_t={t_eval}_E3={E3}uM_kdeub={k_deub}_kdeg={k_deg}"
-result_id = f"{test_id}_kprod_vs_alpha_across_T"
+# test_id = protac_id.replace(" ", "") + f"_bpd_ec={initial_BPD_ec_conc}_t={t_eval}_E3={E3}uM_kdeub={k_deub}_kdeg={k_deg}"
+# result_id = f"{test_id}_kprod_vs_alpha_across_T"
+
+protac_id = 'ACBI1'
+t = 6
+bpd_ec = 0.001
+result_id = f"{protac_id}_bpd_ec={bpd_ec}_t={t}_kprod_vs_alpha"
 
 result = pd.read_csv(f"./saved_objects/{result_id}.csv")
 alpha_range = result['alpha'].unique()

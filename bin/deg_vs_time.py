@@ -9,32 +9,39 @@ import kinetic_module.kinetic_tests as kt
 
 if __name__ == '__main__':
     config_files = [
-        'SiTX_38404_config.yml', 
-        'SiTX_38404_star_config.yml',
+        'ACBI1_WT_config.yml',
+        'ACBI1_E1420S_config.yml',
+        'ACBI1_L1465S_config.yml',
+        'ACBI1_R69Q_config.yml',
+        'ACBI1_Y112F_config.yml',
+        # 'SiTX_38404_config.yml', 
+        # 'SiTX_38404_star_config.yml',
         # 'SiTX_38406_config.yml',
-        'SiTX_38404_kdeg_ternary_config.yml',
-        'SiTX_38404_star_kdeg_ternary_config.yml',
+        # 'SiTX_38404_kdeg_ternary_config.yml',
+        # 'SiTX_38404_star_kdeg_ternary_config.yml',
         # 'SiTX_38406_kdeg_ternary_config.yml',
     ]
     protac_ids = [
-        'PROTAC 1', 
-        'PROTAC 1*',
+        'WT',
+        'E1420S',
+        'L1465S',
+        'R69Q',
+        'Y112F',
+        # 'PROTAC 1', 
+        # 'PROTAC 1*',
         # 'ACBI1',
-        'PROTAC 1',
-        'PROTAC 1*',
+        # 'PROTAC 1',
+        # 'PROTAC 1*',
         # 'ACBI1',
     ]
 
-    test_id = 'deg_vs_time_kdeg_ternary_tmp'
-
-    # config_files = ['SiTX_38406_config.yml']
-    # protac_ids = ['ACBI1']
-    # test_id = 'ACBI1'
+    test_id = 'deg_vs_time_nanobret'
 
     """Fixed initial intracellular BPD concentration
     over a range of time points.
     """
-    t_eval = np.linspace(0, 24, num=100)
+    # t_eval = np.linspace(0, 6, num=50)
+    t_eval = [0, 6, 12]
     initial_BPD_conc = 0.001
 
     result = kt.run_kinetic_model(
